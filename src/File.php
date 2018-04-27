@@ -23,13 +23,13 @@ class File
     }
 
     /** @return static|null */
-    public static function load($path, $disk = null)
+    public static function load($disk, $path, $check = false)
     {
         $disk = static::diskName($disk);
 
         $file = new static($disk, $path);
 
-        if (!$file->exists()) {
+        if ($check && !$file->exists()) {
             return null;
         }
 
@@ -49,6 +49,9 @@ class File
         $disk = static::diskName($disk);
 
         if (!$name) {
+            if ($resource) {
+                $name = pathinfo(stream_get_meta_data($file)['uri'] ?? '', PATHINFO_BASENAME);
+            }
             if ($file instanceof SymfonyFile) {
                 $name = $file->getFilename();
                 if ($file instanceof UploadedFile) {
@@ -61,8 +64,8 @@ class File
         }
 
         if ($resource) {
-            $dir = $dir ? str_finish($dir, '/') : '';
-            $path = Storage::disk($disk)->putStream($dir.$name, $resource);
+            $path = static::path($dir, $name);
+            Storage::disk($disk)->putStream($path, $file);
         } else {
             $path = Storage::disk($disk)->putFileAs($dir, $file, $name);
         }
@@ -70,10 +73,32 @@ class File
         return new static($disk, $path);
     }
 
-    /** @return static */
-    public static function request($key, $disk = null, $dir = '', $name = null)
+    /** @return static[] */
+    public static function request($keys = null, $disk = null, $dir = '', $name = null)
     {
-        return static::put(request()->file($key), $disk, $dir, $name);
+        $keys = $keys ? array_wrap($keys) : array_keys(request()->allFiles());
+
+        $files = [];
+
+        foreach ($keys as $key) {
+            $request_files = array_wrap(request()->file($key));
+            foreach ($request_files as $request_file) {
+                $files[] = static::put($request_file, $disk, $dir, $name);
+            }
+        }
+
+        return $files;
+    }
+
+    /** @return static[] */
+    public static function requestAll($disk = null, $dir = '')
+    {
+        $files = [];
+        foreach (array_keys(request()->allFiles()) as $key) {
+            $files[$key] = static::request($key, $disk, $dir);
+        }
+
+        return $files;
     }
 
     protected static function diskName($name = null)
@@ -85,6 +110,13 @@ class File
         }
 
         return $name;
+    }
+
+    protected static function path($dir, $name)
+    {
+        $dir = $dir ? str_finish($dir, '/') : '';
+
+        return $dir.$name;
     }
 
     /** @return boolean */
@@ -111,8 +143,8 @@ class File
     public function move($disk = null, $dir = '', $name = null)
     {
         $disk = static::diskName($disk);
-        $dir = $dir ? str_finish($dir, '/') : '';
-        $path = $dir.$name;
+        $name = $name ?: $this->name();
+        $path = static::path($dir, $name);
 
         if ($disk == $this->disk) {
             $this->storage()->move($this->path, $path);
@@ -130,9 +162,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-        $dir = $this->dir();
-        $dir = $dir ? str_finish($dir, '/') : '';
-        $path = $dir.$name;
+        $path = static::path($this->dir(), $name);
 
         $this->storage()->rename($this->path, $path);
 
@@ -144,7 +174,7 @@ class File
     /** @return static */
     public function cloud($dir = '', $name = null)
     {
-        return $this->move('cloud', $dir);
+        return $this->move('cloud', $dir, $name);
     }
 
     /** @return boolean */
@@ -156,7 +186,9 @@ class File
     /** @return string */
     public function dir()
     {
-        return pathinfo($this->path, PATHINFO_DIRNAME);
+        $dir = pathinfo($this->path, PATHINFO_DIRNAME);
+
+        return $dir == '.' ? '' : $dir;
     }
 
     /** @return string */
