@@ -136,8 +136,8 @@ class File
             $this->delete();
         }
 
+        $this->path = static::join($path);
         $this->disk = $disk;
-        $this->path = $path;
 
         return $this;
     }
