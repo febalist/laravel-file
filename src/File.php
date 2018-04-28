@@ -108,7 +108,7 @@ class File
     /** @return static|null */
     public function neighbor($path)
     {
-        $path = static::join($this->dir(), $path);
+        $path = static::join($this->directory(), $path);
 
         return static::load($path, $this->disk);
     }
@@ -145,7 +145,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-        $path = static::join($this->dir(), $name);
+        $path = static::join($this->directory(), $name);
 
         $this->move($path);
 
@@ -165,7 +165,7 @@ class File
     }
 
     /** @return string */
-    public function dir()
+    public function directory()
     {
         $dir = pathinfo($this->path, PATHINFO_DIRNAME);
 
