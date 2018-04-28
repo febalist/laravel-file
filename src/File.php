@@ -179,7 +179,7 @@ class File
     }
 
     /** @return string */
-    public function ext()
+    public function extension()
     {
         return pathinfo($this->path, PATHINFO_EXTENSION);
     }
