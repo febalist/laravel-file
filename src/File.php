@@ -17,15 +17,13 @@ class File
 
     public function __construct($path, $disk)
     {
-        $this->path = static::join($path);
-        $this->disk = $disk;
+        $this->path = static::path($path);
+        $this->disk = static::disk($disk);
     }
 
     /** @return static|null */
     public static function load($path, $disk = 'default')
     {
-        $disk = static::disk($disk);
-
         $file = new static($path, $disk);
 
         if (!$file->exists()) {
@@ -38,6 +36,7 @@ class File
     /** @return static */
     public static function put($file, $path, $disk = 'default')
     {
+        $path = static::path($path);
         $disk = static::disk($disk);
 
         if ($file instanceof File) {
@@ -56,7 +55,7 @@ class File
         return new static($path, $disk);
     }
 
-    public static function join(...$path)
+    public static function path(...$path)
     {
         $path = array_flatten($path);
 
@@ -124,9 +123,7 @@ class File
     /** @return static|null */
     public function neighbor($path)
     {
-        $path = static::join($this->directory(), $path);
-
-        return static::load($path, $this->disk);
+        return static::load([$this->directory(), $path], $this->disk);
     }
 
     /** @return static */
@@ -143,6 +140,7 @@ class File
     /** @return static */
     public function move($path, $disk = null)
     {
+        $path = static::path($path);
         $disk = static::disk($disk ?: $this->disk);
 
         if ($disk == $this->disk) {
@@ -152,7 +150,7 @@ class File
             $this->delete();
         }
 
-        $this->path = static::join($path);
+        $this->path = $path;
         $this->disk = $disk;
 
         return $this;
@@ -161,9 +159,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-        $path = static::join($this->directory(), $name);
-
-        $this->move($path);
+        $this->move([$this->directory(), $name]);
 
         return $this;
     }
