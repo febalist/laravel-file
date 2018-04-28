@@ -7,6 +7,7 @@ use Illuminate\Http\File as IlluminateFile;
 use RuntimeException;
 use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class File
@@ -76,6 +77,21 @@ class File
         }
 
         return $path;
+    }
+
+    public static function filename($file)
+    {
+        if ($file instanceof File) {
+            return $file->name();
+        } elseif (is_resource($file)) {
+            return basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
+        } elseif ($file instanceof UploadedFile) {
+            return $file->getClientOriginalName() ?: $file->getFilename();
+        } elseif (!$file instanceof SymfonyFile) {
+            $file = new IlluminateFile($file);
+        }
+
+        return $file->getFilename();
     }
 
     protected static function putFile(SymfonyFile $file, $path, $disk)
