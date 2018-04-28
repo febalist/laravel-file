@@ -2,10 +2,8 @@
 
 namespace Febalist\Laravel\File;
 
-use Exception;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
-use Illuminate\Http\UploadedFile;
 use RuntimeException;
 use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
@@ -13,23 +11,23 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class File
 {
-    public $disk;
     public $path;
+    public $disk;
 
-    public function __construct($disk, $path)
+    public function __construct($path, $disk)
     {
+        $this->path = static::join($path);
         $this->disk = $disk;
-        $this->path = $path;
     }
 
     /** @return static|null */
-    public static function load($path, $disk = null, $check = false)
+    public static function load($path, $disk = 'default')
     {
-        $disk = static::diskName($disk);
+        $disk = static::disk($disk);
 
-        $file = new static($disk, $path);
+        $file = new static($path, $disk);
 
-        if ($check && !$file->exists()) {
+        if (!$file->exists()) {
             return null;
         }
 
@@ -37,75 +35,68 @@ class File
     }
 
     /** @return static */
-    public static function put($file, $name = null, $dir = null, $disk = null)
+    public static function put($file, $path, $disk = 'default')
     {
-        $resource = false;
+        $disk = static::disk($disk);
+
+        if ($file instanceof File) {
+            $file = $file->stream();
+        }
+
         if (is_resource($file)) {
-            $resource = true;
-        } elseif (!$file instanceof SymfonyFile) {
-            $file = new IlluminateFile($file);
-        }
-
-        $disk = static::diskName($disk);
-
-        if (!$name) {
-            if ($resource) {
-                $name = pathinfo(stream_get_meta_data($file)['uri'] ?? '', PATHINFO_BASENAME);
-            }
-            if ($file instanceof SymfonyFile) {
-                $name = $file->getFilename();
-                if ($file instanceof UploadedFile) {
-                    $name = $file->getClientOriginalName() ?: $name;
-                }
-            }
-            if (!$name) {
-                throw new Exception('Unknown file name');
-            }
-        }
-
-        if ($resource) {
-            $path = static::path($dir, $name);
-            Storage::disk($disk)->putStream($path, $file);
+            static::putStream($file, $path, $disk);
         } else {
-            $path = Storage::disk($disk)->putFileAs($dir, $file, $name);
+            if (!$file instanceof SymfonyFile) {
+                $file = new IlluminateFile($file);
+            }
+            static::putFile($file, $path, $disk);
         }
 
-        return new static($disk, $path);
+        return new static($path, $disk);
     }
 
-    /** @return static[] */
-    public static function request($keys = null, $name = null, $dir = null, $disk = null)
+    public static function join(...$path)
     {
-        $keys = $keys ? array_wrap($keys) : array_keys(request()->allFiles());
+        $path = array_flatten($path);
 
-        $files = [];
+        $paths = [];
 
-        foreach ($keys as $key) {
-            $request_files = array_wrap(request()->file($key));
-            foreach ($request_files as $request_file) {
-                $files[] = static::put($request_file, $name, $dir, $disk);
+        foreach ($path as $arg) {
+            if ($arg !== '') {
+                $paths[] = $arg;
             }
         }
 
-        return $files;
+        $path = preg_replace('#/+#', '/', join('/', $paths));
+
+        foreach (['./', '/'] as $string) {
+            if (starts_with($path, $string)) {
+                $path = str_replace_first($string, '', $path);
+            }
+        }
+
+        return $path;
     }
 
-    protected static function diskName($name = null)
+    protected static function putFile(SymfonyFile $file, $path, $disk)
     {
-        if (!$name || $name == 'default') {
+        Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
+    }
+
+    protected static function putStream($resource, $path, $disk)
+    {
+        Storage::disk($disk)->putStream($path, $resource);
+    }
+
+    protected static function disk($name)
+    {
+        if ($name == 'default') {
             return config('filesystems.default');
         } elseif ($name == 'cloud') {
             return config('filesystems.cloud');
         }
 
         return $name;
-    }
-
-    protected static function path($dir, $name)
-    {
-        $dir = $dir ? str_finish($dir, '/') : '';
-
-        return $dir.$name;
     }
 
     /** @return boolean */
@@ -115,20 +106,17 @@ class File
     }
 
     /** @return static|null */
-    public function neighbor($name, $check = false)
+    public function neighbor($path)
     {
-        $path = static::path($this->dir(), $name);
+        $path = static::join($this->dir(), $path);
 
-        return static::load($path, $this->disk, $check);
+        return static::load($path, $this->disk);
     }
 
     /** @return static */
-    public function copy($name = null, $dir = null, $disk = null)
+    public function copy($path, $disk = null)
     {
-        $disk = static::diskName($disk);
-        $name = $name ?: $this->name();
-
-        return static::put($this->stream(), $name, $dir, $disk);
+        return static::put($this, $path, $disk ?: $this->disk);
     }
 
     public function delete()
@@ -137,16 +125,14 @@ class File
     }
 
     /** @return static */
-    public function move($name = null, $dir = null, $disk = null)
+    public function move($path, $disk = null)
     {
-        $disk = static::diskName($disk);
-        $name = $name ?: $this->name();
-        $path = static::path($dir, $name);
+        $disk = static::disk($disk ?: $this->disk);
 
         if ($disk == $this->disk) {
             $this->storage()->move($this->path, $path);
         } else {
-            $this->copy($disk, $dir, $name);
+            $this->copy($path, $disk);
             $this->delete();
         }
 
@@ -159,19 +145,17 @@ class File
     /** @return static */
     public function rename($name)
     {
-        $path = static::path($this->dir(), $name);
+        $path = static::join($this->dir(), $name);
 
-        $this->storage()->rename($this->path, $path);
-
-        $this->path = $path;
+        $this->move($path);
 
         return $this;
     }
 
     /** @return static */
-    public function cloud($name = null, $dir = null)
+    public function cloud($path = null)
     {
-        return $this->move($name, $dir, 'cloud');
+        return $this->move($path ?: $this->path, 'cloud');
     }
 
     /** @return boolean */

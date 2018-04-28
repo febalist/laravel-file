@@ -30,14 +30,14 @@ class Image
         return $this;
     }
 
-    public function save($name = null, $dir = null, $disk = null)
+    public function save($path = null, $disk = null)
     {
-        if ($name || $dir || $disk) {
+        if ($path || $disk) {
             $temp = storage_path(Str::uuid());
 
             $this->image->save($temp);
 
-            $file = File::put($temp, $name, $dir ?: $this->file->dir(), $disk ?: $this->file->disk);
+            $file = File::put($temp, $path ?: $this->file->path, $disk ?: $this->file->disk);
 
             IlluminateFile::delete($temp);
 
