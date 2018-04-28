@@ -23,7 +23,7 @@ class File
     }
 
     /** @return static|null */
-    public static function load($disk, $path, $check = false)
+    public static function load($path, $disk = null, $check = false)
     {
         $disk = static::diskName($disk);
 
@@ -37,7 +37,7 @@ class File
     }
 
     /** @return static */
-    public static function put($file, $disk = null, $dir = '', $name = null)
+    public static function put($file, $name = null, $dir = null, $disk = null)
     {
         $resource = false;
         if (is_resource($file)) {
@@ -74,7 +74,7 @@ class File
     }
 
     /** @return static[] */
-    public static function request($keys = null, $disk = null, $dir = '', $name = null)
+    public static function request($keys = null, $name = null, $dir = null, $disk = null)
     {
         $keys = $keys ? array_wrap($keys) : array_keys(request()->allFiles());
 
@@ -83,19 +83,8 @@ class File
         foreach ($keys as $key) {
             $request_files = array_wrap(request()->file($key));
             foreach ($request_files as $request_file) {
-                $files[] = static::put($request_file, $disk, $dir, $name);
+                $files[] = static::put($request_file, $name, $dir, $disk);
             }
-        }
-
-        return $files;
-    }
-
-    /** @return static[] */
-    public static function requestAll($disk = null, $dir = '')
-    {
-        $files = [];
-        foreach (array_keys(request()->allFiles()) as $key) {
-            $files[$key] = static::request($key, $disk, $dir);
         }
 
         return $files;
@@ -125,13 +114,21 @@ class File
         return $this->storage()->exists($this->path);
     }
 
+    /** @return static|null */
+    public function neighbor($name, $check = false)
+    {
+        $path = static::path($this->dir(), $name);
+
+        return static::load($path, $this->disk, $check);
+    }
+
     /** @return static */
-    public function copy($disk = null, $dir = '', $name = null)
+    public function copy($name = null, $dir = null, $disk = null)
     {
         $disk = static::diskName($disk);
         $name = $name ?: $this->name();
 
-        return static::put($this->stream(), $disk, $dir, $name ?: $this->name());
+        return static::put($this->stream(), $name, $dir, $disk);
     }
 
     public function delete()
@@ -140,7 +137,7 @@ class File
     }
 
     /** @return static */
-    public function move($disk = null, $dir = '', $name = null)
+    public function move($name = null, $dir = null, $disk = null)
     {
         $disk = static::diskName($disk);
         $name = $name ?: $this->name();
@@ -172,15 +169,15 @@ class File
     }
 
     /** @return static */
-    public function cloud($dir = '', $name = null)
+    public function cloud($name = null, $dir = null)
     {
-        return $this->move('cloud', $dir, $name);
+        return $this->move($name, $dir, 'cloud');
     }
 
     /** @return boolean */
     public function local()
     {
-        return (bool) realpath($this->storage()->path($this->path));
+        return realpath($this->storage()->path($this->path));
     }
 
     /** @return string */
@@ -245,5 +242,11 @@ class File
     public function storage()
     {
         return Storage::disk($this->disk);
+    }
+
+    /** @return Image */
+    public function image()
+    {
+        return new Image($this);
     }
 }
