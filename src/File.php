@@ -2,8 +2,10 @@
 
 namespace Febalist\Laravel\File;
 
+use Carbon\Carbon;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
+use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Storage;
@@ -13,6 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class File
 {
+    use InteractsWithTime;
+
     public $path;
     public $disk;
 
@@ -42,6 +46,8 @@ class File
 
         if ($file instanceof File) {
             $file = $file->stream();
+        } elseif (is_string($file) && starts_with($file, ['http://', 'https://'])) {
+            $file = fopen($file, 'rb');
         }
 
         if (is_resource($file)) {
@@ -85,13 +91,15 @@ class File
             return $file->name();
         } elseif (is_resource($file)) {
             return basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
+        } elseif (is_string($file)) {
+            return basename($file);
         } elseif ($file instanceof UploadedFile) {
             return $file->getClientOriginalName() ?: $file->getFilename();
-        } elseif (!$file instanceof SymfonyFile) {
-            $file = new IlluminateFile($file);
+        } elseif ($file instanceof SymfonyFile) {
+            return $file->getFilename();
+        } else {
+            throw new RuntimeException('Invalid file');
         }
-
-        return $file->getFilename();
     }
 
     public static function slug($filename)
@@ -242,6 +250,9 @@ class File
     {
         try {
             if ($expiration) {
+                $expiration = $this->availableAt($expiration);
+                $expiration = Carbon::createFromTimestamp($expiration);
+
                 return $this->storage()->temporaryUrl($this->path, $expiration);
             } else {
                 return $this->storage()->url($this->path);
