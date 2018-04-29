@@ -4,6 +4,7 @@ namespace Febalist\Laravel\File;
 
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
@@ -22,11 +23,11 @@ class File
     }
 
     /** @return static|null */
-    public static function load($path, $disk = 'default')
+    public static function load($path, $disk = 'default', $check = false)
     {
         $file = new static($path, $disk);
 
-        if (!$file->exists()) {
+        if ($check && !$file->exists()) {
             return null;
         }
 
@@ -93,6 +94,22 @@ class File
         return $file->getFilename();
     }
 
+    public static function slug($filename)
+    {
+        $name = str_slug(pathinfo($filename, PATHINFO_FILENAME), '_') ?: '_';
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+
+        return $name.($extension ? ".$extension" : '');
+    }
+
+    public static function temp($extension = null)
+    {
+        $uuid = (string) Str::orderedUuid();
+        $extension = $extension ?: 'tmp';
+
+        return "$uuid.$extension";
+    }
+
     protected static function putFile(SymfonyFile $file, $path, $disk)
     {
         Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
@@ -121,9 +138,9 @@ class File
     }
 
     /** @return static|null */
-    public function neighbor($path)
+    public function neighbor($path, $check = false)
     {
-        return static::load([$this->directory(), $path], $this->disk);
+        return static::load([$this->directory(), $path], $this->disk, $check);
     }
 
     /** @return static */

@@ -3,7 +3,6 @@
 namespace Febalist\Laravel\File;
 
 use File as IlluminateFile;
-use Illuminate\Support\Str;
 use Spatie\Image\Image as SpatieImage;
 use Spatie\Image\Manipulations;
 
@@ -33,11 +32,15 @@ class Image
     public function save($path = null, $disk = null)
     {
         if ($path || $disk) {
-            $temp = storage_path(Str::uuid());
+            $path = $path ?: $this->file->path;
+            $disk = $disk ?: $this->file->disk;
+
+            $temp = File::temp(pathinfo($path, PATHINFO_EXTENSION));
+            $temp = storage_path("temp/$temp");
 
             $this->image->save($temp);
 
-            $file = File::put($temp, $path ?: $this->file->path, $disk ?: $this->file->disk);
+            $file = File::put($temp, $path, $disk);
 
             IlluminateFile::delete($temp);
 
@@ -49,8 +52,8 @@ class Image
         }
     }
 
-    public function fit_crop($width, $height)
+    public function fit_crop($width, $height = null)
     {
-        return $this->fit(Manipulations::FIT_CROP, $width, $height);
+        return $this->fit(Manipulations::FIT_CROP, $width, $height ?: $width);
     }
 }
