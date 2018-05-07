@@ -16,6 +16,6 @@ class FileController extends Controller
         $file = File::load($path, $disk, true);
         abort_unless($file, 404);
 
-        return $file->response(File::slugName($file->name));
+        return $file->response();
     }
 }

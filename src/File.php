@@ -286,6 +286,8 @@ class File
     /** @return StreamedResponse */
     public function response($filename = null, $headers = [])
     {
+        $filename = File::slugName($filename ?: $this->name);
+
         return $this->storage->response($this->path, $filename, $headers);
     }
 
