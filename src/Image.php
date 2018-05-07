@@ -15,7 +15,7 @@ class Image
     public function __construct(File $file)
     {
         $this->file = $file;
-        $this->image = SpatieImage::load($file->local());
+        $this->image = SpatieImage::load($file->local);
     }
 
     public function __call($method, $arguments)
@@ -35,7 +35,7 @@ class Image
             $path = $path ?: $this->file->path;
             $disk = $disk ?: $this->file->disk;
 
-            $temp = File::temp(pathinfo($path, PATHINFO_EXTENSION));
+            $temp = File::tempName(pathinfo($path, PATHINFO_EXTENSION));
             $temp = storage_path("temp/$temp");
 
             $this->image->save($temp);

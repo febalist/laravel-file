@@ -13,6 +13,7 @@ use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use URL;
 
 /**
  * @property-read boolean           $exists
@@ -23,7 +24,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property-read integer           $size
  * @property-read string            $mime
  * @property-read string            $type
+ * @property-read boolean           $convertible
  * @property-read string            $url
+ * @property-read string            $preview
+ * @property-read string            $embedded
  * @property-read FilesystemAdapter $storage
  * @property-read Image|null        $image
  */
@@ -164,7 +168,10 @@ class File
             'size',
             'mime',
             'type',
+            'convertible',
             'url',
+            'preview',
+            'embedded',
             'storage',
             'image',
         ])) {
@@ -286,21 +293,59 @@ class File
         return str_before($this->mime, '/');
     }
 
+    /** @return boolean */
+    public function convertible()
+    {
+        return $this->type == 'image' && in_array($this->extension, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    }
+
     /** @return string|null */
     public function url($expiration = null)
     {
+        if ($expiration) {
+            $expiration = $this->availableAt($expiration);
+            $expiration = Carbon::createFromTimestamp($expiration);
+        }
+
         try {
             if ($expiration) {
-                $expiration = $this->availableAt($expiration);
-                $expiration = Carbon::createFromTimestamp($expiration);
-
-                return $this->storage->temporaryUrl($this->path, $expiration);
+                $url = $this->storage->temporaryUrl($this->path, $expiration);
             } else {
-                return $this->storage->url($this->path);
+                $url = $this->storage->url($this->path);
             }
         } catch (RuntimeException $exception) {
-            return null;
+            $url = null;
         }
+
+        if ($url && starts_with($url, ['http://', 'https://'])) {
+            return $url;
+        }
+
+        return URL::signedRoute('file.download', [$this->disk, $this->path], $expiration);
+    }
+
+    /** @return string */
+    public function preview($embedded = false)
+    {
+        $extension = $this->extension;
+        $name = $this->name;
+        $url = $this->url;
+
+        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'ico', 'mp3', 'mp4', 'webm', 'txt'])) {
+            return $url;
+        } elseif (in_array($extension, ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'])) {
+            return 'https://view.officeapps.live.com/op/'.($embedded ? 'embed' : 'view').'.aspx?src='.urlencode($url);
+        } elseif (in_array($extension, ['ods', 'sxc', 'csv', 'tsv'])) {
+            return "https://sheet.zoho.com/sheet/view.do?&name=$name&url=".urlencode($url);
+        } else {
+            return 'https://docs.google.com/viewer?'.($embedded ? 'embedded=true&' : '').'url='.urlencode($url);
+        }
+    }
+
+    /** @return string */
+    public function embedded()
+    {
+        return $this->preview(true);
     }
 
     /** @return FilesystemAdapter */
@@ -312,7 +357,7 @@ class File
     /** @return Image|null */
     public function image()
     {
-        if ($this->type == 'image' && in_array($this->extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+        if ($this->convertible) {
             return new Image($this);
         }
 

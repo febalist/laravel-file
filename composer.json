@@ -11,7 +11,9 @@
   },
   "extra": {
     "laravel": {
-      "providers": []
+      "providers": [
+        "Febalist\\Laravel\\File\\FileServiceProvider"
+      ]
     }
   }
 }
