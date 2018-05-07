@@ -98,7 +98,7 @@ class File
         return $path;
     }
 
-    public static function filename($file)
+    public static function getName($file)
     {
         if ($file instanceof File) {
             return $file->name;
@@ -115,7 +115,7 @@ class File
         }
     }
 
-    public static function slug($filename)
+    public static function slugName($filename)
     {
         $name = str_slug(pathinfo($filename, PATHINFO_FILENAME), '_') ?: '_';
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
@@ -123,7 +123,7 @@ class File
         return $name.($extension ? ".$extension" : '');
     }
 
-    public static function temp($extension = null)
+    public static function tempName($extension = null)
     {
         $uuid = (string) Str::orderedUuid();
         $extension = $extension ?: 'tmp';
