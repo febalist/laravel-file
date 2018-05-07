@@ -22,9 +22,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property-read string            $extension
  * @property-read integer           $size
  * @property-read string            $mime
+ * @property-read string            $type
  * @property-read string            $url
  * @property-read FilesystemAdapter $storage
- * @property-read Image             $image
+ * @property-read Image|null        $image
  */
 class File
 {
@@ -162,6 +163,7 @@ class File
             'extension',
             'size',
             'mime',
+            'type',
             'url',
             'storage',
             'image',
@@ -251,7 +253,7 @@ class File
     /** @return string */
     public function extension()
     {
-        return pathinfo($this->path, PATHINFO_EXTENSION);
+        return strtolower(pathinfo($this->path, PATHINFO_EXTENSION));
     }
 
     /** @return integer */
@@ -278,6 +280,12 @@ class File
         return $this->storage->mimeType($this->path);
     }
 
+    /** @return string */
+    public function type()
+    {
+        return str_before($this->mime, '/');
+    }
+
     /** @return string|null */
     public function url($expiration = null)
     {
@@ -301,9 +309,13 @@ class File
         return Storage::disk($this->disk);
     }
 
-    /** @return Image */
+    /** @return Image|null */
     public function image()
     {
-        return new Image($this);
+        if ($this->type == 'image' && in_array($this->extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+            return new Image($this);
+        }
+
+        return null;
     }
 }
