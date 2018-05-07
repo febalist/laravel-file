@@ -136,17 +136,7 @@ class File
         return "$uuid.$extension";
     }
 
-    protected static function putFile(SymfonyFile $file, $path, $disk)
-    {
-        Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
-    }
-
-    protected static function putStream($resource, $path, $disk)
-    {
-        Storage::disk($disk)->putStream($path, $resource);
-    }
-
-    protected static function diskName($name)
+    public static function diskName($name)
     {
         if ($name == 'default') {
             return config('filesystems.default');
@@ -155,6 +145,16 @@ class File
         }
 
         return $name;
+    }
+
+    protected static function putFile(SymfonyFile $file, $path, $disk)
+    {
+        Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
+    }
+
+    protected static function putStream($resource, $path, $disk)
+    {
+        Storage::disk($disk)->putStream($path, $resource);
     }
 
     public function __get($name)
