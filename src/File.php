@@ -3,6 +3,7 @@
 namespace Febalist\Laravel\File;
 
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
 use Illuminate\Support\InteractsWithTime;
@@ -13,6 +14,18 @@ use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * @property-read boolean           $exists
+ * @property-read string|false      $local
+ * @property-read string            $directory
+ * @property-read string            $name
+ * @property-read string            $extension
+ * @property-read integer           $size
+ * @property-read string            $mime
+ * @property-read string            $url
+ * @property-read FilesystemAdapter $storage
+ * @property-read Image             $image
+ */
 class File
 {
     use InteractsWithTime;
@@ -22,8 +35,8 @@ class File
 
     public function __construct($path, $disk)
     {
-        $this->path = static::path($path);
-        $this->disk = static::disk($disk);
+        $this->path = static::pathJoin($path);
+        $this->disk = static::diskName($disk);
     }
 
     /** @return static|null */
@@ -41,8 +54,8 @@ class File
     /** @return static */
     public static function put($file, $path, $disk = 'default')
     {
-        $path = static::path($path);
-        $disk = static::disk($disk);
+        $path = static::pathJoin($path);
+        $disk = static::diskName($disk);
 
         if ($file instanceof File) {
             $file = $file->stream();
@@ -62,7 +75,7 @@ class File
         return new static($path, $disk);
     }
 
-    public static function path(...$path)
+    public static function pathJoin(...$path)
     {
         $path = array_flatten($path);
 
@@ -88,7 +101,7 @@ class File
     public static function filename($file)
     {
         if ($file instanceof File) {
-            return $file->name();
+            return $file->name;
         } elseif (is_resource($file)) {
             return basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
         } elseif (is_string($file)) {
@@ -128,7 +141,7 @@ class File
         Storage::disk($disk)->putStream($path, $resource);
     }
 
-    protected static function disk($name)
+    protected static function diskName($name)
     {
         if ($name == 'default') {
             return config('filesystems.default');
@@ -137,6 +150,26 @@ class File
         }
 
         return $name;
+    }
+
+    public function __get($name)
+    {
+        if (in_array($name, [
+            'exists',
+            'local',
+            'directory',
+            'name',
+            'extension',
+            'size',
+            'mime',
+            'url',
+            'storage',
+            'image',
+        ])) {
+            return $this->$name();
+        }
+
+        throw new Exception("Undefined property: $name");
     }
 
     /** @return boolean */
@@ -148,7 +181,7 @@ class File
     /** @return static|null */
     public function neighbor($path, $check = false)
     {
-        return static::load([$this->directory(), $path], $this->disk, $check);
+        return static::load([$this->directory, $path], $this->disk, $check);
     }
 
     /** @return static */
@@ -165,11 +198,11 @@ class File
     /** @return static */
     public function move($path, $disk = null)
     {
-        $path = static::path($path);
-        $disk = static::disk($disk ?: $this->disk);
+        $path = static::pathJoin($path);
+        $disk = static::diskName($disk ?: $this->disk);
 
         if ($disk == $this->disk) {
-            $this->storage()->move($this->path, $path);
+            $this->storage->move($this->path, $path);
         } else {
             $this->copy($path, $disk);
             $this->delete();
@@ -184,7 +217,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-        $this->move([$this->directory(), $name]);
+        $this->move([$this->directory, $name]);
 
         return $this;
     }
@@ -195,10 +228,10 @@ class File
         return $this->move($path ?: $this->path, 'cloud');
     }
 
-    /** @return boolean */
+    /** @return string */
     public function local()
     {
-        return realpath($this->storage()->path($this->path));
+        return realpath($this->storage->path($this->path));
     }
 
     /** @return string */
@@ -224,25 +257,25 @@ class File
     /** @return integer */
     public function size()
     {
-        return $this->storage()->size($this->path);
+        return $this->storage->size($this->path);
     }
 
     /** @return resource */
     public function stream()
     {
-        return $this->storage()->readStream($this->path);
+        return $this->storage->readStream($this->path);
     }
 
     /** @return StreamedResponse */
     public function response($filename = null, $headers = [])
     {
-        return $this->storage()->response($this->path, $filename, $headers);
+        return $this->storage->response($this->path, $filename, $headers);
     }
 
     /** @return string|false */
     public function mime()
     {
-        return $this->storage()->mimeType($this->path);
+        return $this->storage->mimeType($this->path);
     }
 
     /** @return string|null */
@@ -253,9 +286,9 @@ class File
                 $expiration = $this->availableAt($expiration);
                 $expiration = Carbon::createFromTimestamp($expiration);
 
-                return $this->storage()->temporaryUrl($this->path, $expiration);
+                return $this->storage->temporaryUrl($this->path, $expiration);
             } else {
-                return $this->storage()->url($this->path);
+                return $this->storage->url($this->path);
             }
         } catch (RuntimeException $exception) {
             return null;
