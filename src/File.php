@@ -210,6 +210,14 @@ class File
         $path = static::pathJoin($path);
         $disk = static::diskName($disk ?: $this->disk);
 
+        if ($disk == $this->disk && $path == $this->path) {
+            return $this;
+        }
+
+        if ($file = static::load($path, $disk, true)) {
+            $file->delete();
+        }
+
         if ($disk == $this->disk) {
             $this->storage->move($this->path, $path);
         } else {
