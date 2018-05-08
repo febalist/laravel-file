@@ -8,6 +8,7 @@ use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
 use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
+use Mimey\MimeTypes;
 use RuntimeException;
 use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
@@ -120,6 +121,25 @@ class File
         }
     }
 
+    public static function getMime($file)
+    {
+        if ($file instanceof UploadedFile) {
+            return $file->getClientMimeType() ?: $file->getMimeType();
+        } elseif ($file instanceof SymfonyFile) {
+            return $file->getMimeType();
+        }
+
+        $name = static::getName($file);
+        $extension = static::nameExtension($name);
+
+        return static::extensionMime($extension);
+    }
+
+    public static function nameExtension($name)
+    {
+        return strtolower(pathinfo($name));
+    }
+
     public static function slugName($filename)
     {
         $name = str_slug(pathinfo($filename, PATHINFO_FILENAME), '_') ?: '_';
@@ -147,6 +167,16 @@ class File
         return $name;
     }
 
+    public static function extensionMime($extension)
+    {
+        return static::mimey()->getMimeType($extension);
+    }
+
+    public static function mimeExtension($mime)
+    {
+        return static::mimey()->getExtension($mime);
+    }
+
     protected static function putFile(SymfonyFile $file, $path, $disk)
     {
         Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
@@ -155,6 +185,11 @@ class File
     protected static function putStream($resource, $path, $disk)
     {
         Storage::disk($disk)->putStream($path, $resource);
+    }
+
+    protected static function mimey()
+    {
+        return new MimeTypes();
     }
 
     public function __get($name)
@@ -262,13 +297,13 @@ class File
     /** @return string */
     public function name()
     {
-        return pathinfo($this->path, PATHINFO_BASENAME);
+        return basename($this->path);
     }
 
     /** @return string */
     public function extension()
     {
-        return strtolower(pathinfo($this->path, PATHINFO_EXTENSION));
+        return static::nameExtension($this->name);
     }
 
     /** @return integer */
@@ -294,7 +329,7 @@ class File
     /** @return string|false */
     public function mime()
     {
-        return $this->storage->mimeType($this->path);
+        return static::extensionMime($this->extension);
     }
 
     /** @return string */
