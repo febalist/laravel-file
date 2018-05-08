@@ -18,4 +18,12 @@ class FileController extends Controller
 
         return $file->response();
     }
+
+    public function gallery($uuid)
+    {
+        $urls = cache("febalist.file:gallery:$uuid", []);
+        abort_unless($urls, 404);
+
+        return view('file::gallery', compact('urls'));
+    }
 }

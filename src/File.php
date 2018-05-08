@@ -46,6 +46,17 @@ class File
         $this->disk = static::diskName($disk);
     }
 
+    /** @return string */
+    public static function gallery($urls, $expiration = 1)
+    {
+        $uuid = (string) Str::uuid();
+        cache([
+            "febalist.file:gallery:$uuid" => $urls,
+        ], $expiration);
+
+        return route('file.gallery', $uuid);
+    }
+
     /** @return static|null */
     public static function load($path, $disk = 'default', $check = false)
     {
