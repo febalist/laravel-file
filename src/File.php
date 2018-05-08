@@ -7,6 +7,7 @@ use Exception;
 use File as FileHelper;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
 use Mimey\MimeTypes;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use URL;
+use ZipStream\ZipStream;
 
 /**
  * @property-read boolean           $exists
@@ -55,6 +57,36 @@ class File
         ], 1);
 
         return route('file.gallery', $uuid);
+    }
+
+    public static function zip($files, $name = 'files.zip')
+    {
+        if (!$files instanceof Collection) {
+            $files = collect(array_wrap($files));
+        }
+
+        $name = static::slugName(str_finish($name, '.zip'));
+        $zip = new ZipStream($name);
+        $files->each(function (File $file) use ($zip) {
+            $zip->addFileFromStream($file->name(), $file->stream());
+        });
+        $zip->finish();
+    }
+
+    public static function zipUrl($files, $name = 'files.zip')
+    {
+        if (!$files instanceof Collection) {
+            $files = collect(array_wrap($files));
+        }
+
+        $uuid = (string) Str::uuid();
+        cache([
+            "febalist.file:zip:$uuid" => $files->map(function (File $file) {
+                return [$file->path, $file->disk];
+            })->toArray(),
+        ], 5);
+
+        return route('file.zip', [$uuid, $name]);
     }
 
     /** @return static|null */
@@ -179,6 +211,11 @@ class File
         return $absolute ? $path : $name;
     }
 
+    public static function tempPath($extension = null, $absolute = false)
+    {
+        return static::pathJoin(static::tempDirectory($absolute), static::tempName($extension));
+    }
+
     public static function diskName($name)
     {
         if ($name == 'default') {
@@ -260,9 +297,7 @@ class File
     /** @return static */
     public function copyTemp()
     {
-        $directory = static::tempDirectory();
-        $name = static::tempName($this->extension());
-        $path = static::pathJoin($directory, $name);
+        $path = static::tempPath($this->extension());
 
         return static::put($this, $path, 'local');
     }

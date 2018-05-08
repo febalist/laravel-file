@@ -9,4 +9,6 @@ Route::group([
         ->name('file.download');
     Route::get('gallery/{uuid}', 'FileController@gallery')
         ->name('file.gallery');
+    Route::get('zip/{uuid}/{name}', 'FileController@zip')
+        ->name('file.zip');
 });

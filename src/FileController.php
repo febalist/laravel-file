@@ -26,4 +26,16 @@ class FileController extends Controller
 
         return view('file::gallery', compact('urls'));
     }
+
+    public function zip($uuid, $name)
+    {
+        $files = cache("febalist.file:zip:$uuid", []);
+        abort_unless($files, 404);
+
+        $files = array_map(function ($file) {
+            return new File($file[0], $file[1]);
+        }, $files);
+
+        return File::zip($files, $name);
+    }
 }
