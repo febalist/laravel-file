@@ -447,7 +447,9 @@ class File
         } elseif (in_array($extension, ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'])) {
             return 'https://view.officeapps.live.com/op/'.($embedded ? 'embed' : 'view').'.aspx?src='.urlencode($url);
         } elseif (in_array($extension, ['ods', 'sxc', 'csv', 'tsv'])) {
-            return "https://sheet.zoho.com/sheet/view.do?&name=$name&url=".urlencode($url);
+            return 'https://sheet.zoho.com/sheet/view.do?&name='.urlencode($name).'&url='.urlencode($url);
+        } elseif ($extension == 'pdf') {
+            return 'https://febalist.github.io/pdf_viewer/?name='.urlencode($name).'&url='.urlencode($url);
         } else {
             return 'https://docs.google.com/viewer?'.($embedded ? 'embedded=true&' : '').'url='.urlencode($url);
         }
