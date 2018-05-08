@@ -21,10 +21,15 @@ class FileController extends Controller
 
     public function gallery($uuid)
     {
-        $urls = cache("febalist.file:gallery:$uuid", []);
-        abort_unless($urls, 404);
+        $files = cache("febalist.file:gallery:$uuid", []);
 
-        return view('file::gallery', compact('urls'));
+        abort_unless($files, 404);
+
+        $files = array_map(function ($file) {
+            return new File($file[0], $file[1]);
+        }, $files);
+
+        return view('file::gallery', compact('files'));
     }
 
     public function zip($uuid, $name)

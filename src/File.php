@@ -32,6 +32,7 @@ use ZipStream\ZipStream;
  * @property-read string            $url
  * @property-read string            $preview
  * @property-read string            $embedded
+ * @property-read string            $icon
  * @property-read FilesystemAdapter $storage
  * @property-read Image|null        $image
  */
@@ -49,11 +50,17 @@ class File
     }
 
     /** @return string */
-    public static function galleryUrl($urls)
+    public static function galleryUrl($files)
     {
+        if (!$files instanceof Collection) {
+            $files = collect(array_wrap($files));
+        }
+
         $uuid = (string) Str::uuid();
         cache([
-            "febalist.file:gallery:$uuid" => $urls,
+            "febalist.file:gallery:$uuid" => $files->map(function (File $file) {
+                return [$file->path, $file->disk];
+            })->toArray(),
         ], 1);
 
         return route('file.gallery', $uuid);
@@ -267,6 +274,7 @@ class File
             'url',
             'preview',
             'embedded',
+            'icon',
             'storage',
             'image',
         ])) {
@@ -459,6 +467,11 @@ class File
     public function embedded()
     {
         return $this->preview(true);
+    }
+
+    public function icon($size = 128)
+    {
+        return "https://raw.githubusercontent.com/eagerterrier/MimeTypes-Link-Icons/master/images/{$this->extension()}-icon-{$size}x{$size}.png";
     }
 
     /** @return FilesystemAdapter */
