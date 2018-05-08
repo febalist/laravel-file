@@ -4,6 +4,7 @@ namespace Febalist\Laravel\File;
 
 use Carbon\Carbon;
 use Exception;
+use File as FileHelper;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
 use Illuminate\Support\InteractsWithTime;
@@ -104,7 +105,7 @@ class File
         return $path;
     }
 
-    public static function getName($file)
+    public static function fileName($file)
     {
         if ($file instanceof File) {
             return $file->name;
@@ -121,7 +122,7 @@ class File
         }
     }
 
-    public static function getMime($file)
+    public static function fileMime($file)
     {
         if ($file instanceof UploadedFile) {
             return $file->getClientMimeType() ?: $file->getMimeType();
@@ -129,15 +130,15 @@ class File
             return $file->getMimeType();
         }
 
-        $name = static::getName($file);
-        $extension = static::nameExtension($name);
+        $name = static::fileName($file);
+        $extension = static::pathExtension($name);
 
         return static::extensionMime($extension);
     }
 
-    public static function nameExtension($name)
+    public static function pathExtension($path)
     {
-        return strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        return strtolower(pathinfo($path, PATHINFO_EXTENSION));
     }
 
     public static function slugName($filename)
@@ -234,6 +235,20 @@ class File
         return static::put($this, $path, $disk ?: $this->disk);
     }
 
+    /** @return static */
+    public function copyTemp()
+    {
+        $directory = storage_path('app/temp');
+        if (!FileHelper::exists($directory)) {
+            FileHelper::makeDirectory($directory);
+        }
+
+        $name = static::tempName($this->extension);
+        $path = static::pathJoin($directory, $name);
+
+        return static::put($this, $path, 'local');
+    }
+
     public function delete()
     {
         $this->storage()->delete($this->path);
@@ -269,9 +284,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-        $this->move([$this->directory, $name]);
-
-        return $this;
+       return $this->move([$this->directory, $name]);
     }
 
     /** @return static */
@@ -303,7 +316,7 @@ class File
     /** @return string */
     public function extension()
     {
-        return static::nameExtension($this->name);
+        return static::pathExtension($this->name);
     }
 
     /** @return integer */
