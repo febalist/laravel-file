@@ -47,12 +47,12 @@ class File
     }
 
     /** @return string */
-    public static function gallery($urls, $expiration = 1)
+    public static function galleryUrl($urls)
     {
         $uuid = (string) Str::uuid();
         cache([
             "febalist.file:gallery:$uuid" => $urls,
-        ], $expiration);
+        ], 1);
 
         return route('file.gallery', $uuid);
     }
