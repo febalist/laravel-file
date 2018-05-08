@@ -157,6 +157,17 @@ class File
         return "$uuid.$extension";
     }
 
+    public static function tempDirectory($absolute = false)
+    {
+        $name = 'temp';
+        $path = storage_path("app/$name");
+        if (!FileHelper::exists($path)) {
+            FileHelper::makeDirectory($path);
+        }
+
+        return $absolute ? $path : $name;
+    }
+
     public static function diskName($name)
     {
         if ($name == 'default') {
@@ -238,11 +249,7 @@ class File
     /** @return static */
     public function copyTemp()
     {
-        $directory = storage_path('app/temp');
-        if (!FileHelper::exists($directory)) {
-            FileHelper::makeDirectory($directory);
-        }
-
+        $directory = static::tempDirectory();
         $name = static::tempName($this->extension());
         $path = static::pathJoin($directory, $name);
 
@@ -284,7 +291,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-       return $this->move([$this->directory(), $name]);
+        return $this->move([$this->directory(), $name]);
     }
 
     /** @return static */
