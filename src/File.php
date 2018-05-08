@@ -137,7 +137,7 @@ class File
 
     public static function nameExtension($name)
     {
-        return strtolower(pathinfo($name));
+        return strtolower(pathinfo($name, PATHINFO_EXTENSION));
     }
 
     public static function slugName($filename)
