@@ -226,7 +226,7 @@ class File
     /** @return static|null */
     public function neighbor($path, $check = false)
     {
-        return static::load([$this->directory, $path], $this->disk, $check);
+        return static::load([$this->directory(), $path], $this->disk, $check);
     }
 
     /** @return static */
@@ -243,7 +243,7 @@ class File
             FileHelper::makeDirectory($directory);
         }
 
-        $name = static::tempName($this->extension);
+        $name = static::tempName($this->extension());
         $path = static::pathJoin($directory, $name);
 
         return static::put($this, $path, 'local');
@@ -269,7 +269,7 @@ class File
         }
 
         if ($disk == $this->disk) {
-            $this->storage->move($this->path, $path);
+            $this->storage()->move($this->path, $path);
         } else {
             $this->copy($path, $disk);
             $this->delete();
@@ -284,7 +284,7 @@ class File
     /** @return static */
     public function rename($name)
     {
-       return $this->move([$this->directory, $name]);
+       return $this->move([$this->directory(), $name]);
     }
 
     /** @return static */
@@ -296,7 +296,7 @@ class File
     /** @return string */
     public function local()
     {
-        return realpath($this->storage->path($this->path));
+        return realpath($this->storage()->path($this->path));
     }
 
     /** @return string */
@@ -316,45 +316,45 @@ class File
     /** @return string */
     public function extension()
     {
-        return static::pathExtension($this->name);
+        return static::pathExtension($this->name());
     }
 
     /** @return integer */
     public function size()
     {
-        return $this->storage->size($this->path);
+        return $this->storage()->size($this->path);
     }
 
     /** @return resource */
     public function stream()
     {
-        return $this->storage->readStream($this->path);
+        return $this->storage()->readStream($this->path);
     }
 
     /** @return StreamedResponse */
     public function response($filename = null, $headers = [])
     {
-        $filename = File::slugName($filename ?: $this->name);
+        $filename = File::slugName($filename ?: $this->name());
 
-        return $this->storage->response($this->path, $filename, $headers);
+        return $this->storage()->response($this->path, $filename, $headers);
     }
 
     /** @return string|false */
     public function mime()
     {
-        return static::extensionMime($this->extension);
+        return static::extensionMime($this->extension());
     }
 
     /** @return string */
     public function type()
     {
-        return str_before($this->mime, '/');
+        return str_before($this->mime(), '/');
     }
 
     /** @return boolean */
     public function convertible()
     {
-        return $this->type == 'image' && in_array($this->extension, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+        return $this->type() == 'image' && in_array($this->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
     }
 
     /** @return string|null */
@@ -367,9 +367,9 @@ class File
 
         try {
             if ($expiration) {
-                $url = $this->storage->temporaryUrl($this->path, $expiration);
+                $url = $this->storage()->temporaryUrl($this->path, $expiration);
             } else {
-                $url = $this->storage->url($this->path);
+                $url = $this->storage()->url($this->path);
             }
         } catch (RuntimeException $exception) {
             $url = null;
@@ -385,9 +385,9 @@ class File
     /** @return string */
     public function preview($embedded = false)
     {
-        $extension = $this->extension;
-        $name = $this->name;
-        $url = $this->url;
+        $extension = $this->extension();
+        $name = $this->name();
+        $url = $this->url();
 
         if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'ico', 'mp3', 'mp4', 'webm', 'txt'])) {
             return $url;
@@ -415,7 +415,7 @@ class File
     /** @return Image|null */
     public function image()
     {
-        if ($this->convertible) {
+        if ($this->convertible()) {
             return new Image($this);
         }
 
