@@ -11,7 +11,7 @@
       <a href="{{ $file->url() }}"></a>
     @else
       <div data-thumb="{{ $file->icon() }}">
-        <iframe src="{{ $file->embedded() }}"></iframe>
+        <iframe src="{{ $file->view() }}"></iframe>
       </div>
     @endif
   @endforeach

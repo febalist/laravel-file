@@ -30,8 +30,7 @@ use ZipStream\ZipStream;
  * @property-read string            $type
  * @property-read boolean           $convertible
  * @property-read string            $url
- * @property-read string            $preview
- * @property-read string            $embedded
+ * @property-read string            $view
  * @property-read string            $icon
  * @property-read FilesystemAdapter $storage
  * @property-read Image|null        $image
@@ -272,6 +271,7 @@ class File
             'type',
             'convertible',
             'url',
+            'view',
             'preview',
             'embedded',
             'icon',
@@ -418,7 +418,7 @@ class File
         return $this->type() == 'image' && in_array($this->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
     }
 
-    /** @return string|null */
+    /** @return string */
     public function url($expiration = null)
     {
         if ($expiration) {
@@ -444,26 +444,21 @@ class File
     }
 
     /** @return string */
-    public function preview($embedded = false)
+    public function view($expiration = null)
     {
-        $extension = $this->extension();
-        $name = $this->name();
-        $url = $this->url();
+        $url = urlencode($this->url());
+        $name = urlencode($this->name());
 
-        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'ico', 'mp3', 'mp4', 'webm', 'txt'])) {
-            return $url;
-        } elseif (in_array($extension, ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'])) {
-            return 'https://view.officeapps.live.com/op/'.($embedded ? 'embed' : 'view').'.aspx?src='.urlencode($url);
-        } elseif (in_array($extension, ['ods', 'sxc', 'csv', 'tsv'])) {
-            return 'https://sheet.zoho.com/sheet/view.do?&name='.urlencode($name).'&url='.urlencode($url);
-        } elseif ($extension == 'pdf') {
-            return 'https://febalist.github.io/pdf_viewer/?name='.urlencode($name).'&url='.urlencode($url);
-        } else {
-            return 'https://docs.google.com/viewer?'.($embedded ? 'embedded=true&' : '').'url='.urlencode($url);
-        }
+        return "https://febalist.github.io/viewer/?url=$url&name=$name";
     }
 
-    /** @return string */
+    /** @deprecated */
+    public function preview($embedded = false)
+    {
+        return $this->view();
+    }
+
+    /** @deprecated */
     public function embedded()
     {
         return $this->preview(true);
