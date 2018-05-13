@@ -7,13 +7,9 @@
      data-ratio="16/9" data-allowfullscreen="native" data-thumbfit="cover" data-keyboard="true">
   @foreach($files as $file)
     @php /** @var \Febalist\Laravel\File\File $file */ @endphp
-    @if($file->type == 'image')
-      <a href="{{ $file->url() }}"></a>
-    @else
-      <div data-thumb="{{ $file->icon() }}">
-        <iframe src="{{ $file->view() }}"></iframe>
-      </div>
-    @endif
+    <div data-thumb="{{ $file->type == 'image' ? $file->url() : $file->icon() }}">
+      <iframe src="{{ $file->view() }}"></iframe>
+    </div>
   @endforeach
 </div>
 
