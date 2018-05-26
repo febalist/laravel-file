@@ -154,21 +154,23 @@ class File
         return $path;
     }
 
-    public static function fileName($file)
+    public static function fileName($file, $slug = false)
     {
         if ($file instanceof File) {
-            return $file->name;
+            $name = $file->name;
         } elseif (is_resource($file)) {
-            return basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
+            $name = basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
         } elseif (is_string($file)) {
-            return basename($file);
+            $name = basename($file);
         } elseif ($file instanceof UploadedFile) {
-            return $file->getClientOriginalName() ?: $file->getFilename();
+            $name = $file->getClientOriginalName() ?: $file->getFilename();
         } elseif ($file instanceof SymfonyFile) {
-            return $file->getFilename();
+            $name = $file->getFilename();
         } else {
             throw new RuntimeException('Invalid file');
         }
+
+        return $slug ? static::slugName($name) : $name;
     }
 
     public static function fileMime($file)
