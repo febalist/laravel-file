@@ -221,7 +221,11 @@ class File
 
     public static function tempPath($extension = null, $absolute = false)
     {
-        return static::pathJoin(static::tempDirectory($absolute), static::tempName($extension));
+        $directory = static::tempDirectory($absolute);
+        $name = static::tempName($extension);
+        $path = static::pathJoin($directory, $name);
+
+        return $absolute ? str_start($path, '/') : $path;
     }
 
     public static function diskName($name)
