@@ -108,7 +108,7 @@ class File
     }
 
     /** @return static */
-    public static function put($file, $path, $disk = 'default')
+    public static function put($file, $path, $disk = 'default', $delete = false)
     {
         $path = static::pathJoin($path);
         $disk = static::diskName($disk);
@@ -125,7 +125,7 @@ class File
             if (!$file instanceof SymfonyFile) {
                 $file = new IlluminateFile($file);
             }
-            static::putFile($file, $path, $disk);
+            static::putFile($file, $path, $disk, $delete);
         }
 
         return new static($path, $disk);
@@ -249,9 +249,13 @@ class File
         return static::mimey()->getExtension($mime);
     }
 
-    protected static function putFile(SymfonyFile $file, $path, $disk)
+    protected static function putFile(SymfonyFile $file, $path, $disk, $delete = false)
     {
         Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
+
+        if ($delete) {
+            FileHelper::delete($file);
+        }
     }
 
     protected static function putStream($resource, $path, $disk)
