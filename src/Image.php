@@ -5,7 +5,10 @@ namespace Febalist\Laravel\File;
 use Spatie\Image\Image as SpatieImage;
 use Spatie\Image\Manipulations;
 
-/** @mixin SpatieImage */
+/**
+ * @mixin SpatieImage
+ * @method self save()
+ */
 class Image
 {
     public $file;
@@ -26,13 +29,6 @@ class Image
         }
 
         return $this;
-    }
-
-    public function save()
-    {
-        $this->image->save();
-
-        return $this->file;
     }
 
     public function fit_crop($width, $height = null)
