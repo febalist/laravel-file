@@ -332,12 +332,6 @@ class File
         return $this->move([$this->directory(), $name]);
     }
 
-    /** @return static */
-    public function cloud($path = null)
-    {
-        return $this->move($path ?: $this->path, 'cloud');
-    }
-
     /** @return string */
     public function local()
     {
