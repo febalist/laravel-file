@@ -3,7 +3,6 @@
 namespace Febalist\Laravel\File;
 
 use Carbon\Carbon;
-use Exception;
 use File as FileHelper;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
@@ -19,28 +18,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use URL;
 use ZipStream\ZipStream;
 
-/**
- * @property-read boolean           $exists
- * @property-read string|false      $local
- * @property-read string            $directory
- * @property-read string            $name
- * @property-read string            $extension
- * @property-read integer           $size
- * @property-read string            $mime
- * @property-read string            $type
- * @property-read boolean           $convertible
- * @property-read string            $url
- * @property-read string            $view
- * @property-read string            $icon
- * @property-read FilesystemAdapter $storage
- * @property-read Image|null        $image
- */
 class File
 {
     use InteractsWithTime;
 
-    public $path;
-    public $disk;
+    protected $path;
+    protected $disk;
 
     public function __construct($path, $disk)
     {
@@ -164,7 +147,7 @@ class File
     public static function fileName($file, $slug = false)
     {
         if ($file instanceof File) {
-            $name = $file->name;
+            $name = $file->name();
         } elseif (is_resource($file)) {
             $name = basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
         } elseif (is_string($file)) {
@@ -275,30 +258,14 @@ class File
         return new MimeTypes();
     }
 
-    public function __get($name)
+    public function path()
     {
-        if (in_array($name, [
-            'exists',
-            'local',
-            'directory',
-            'name',
-            'extension',
-            'size',
-            'mime',
-            'type',
-            'convertible',
-            'url',
-            'view',
-            'preview',
-            'embedded',
-            'icon',
-            'storage',
-            'image',
-        ])) {
-            return $this->$name();
-        }
+        return $this->path;
+    }
 
-        throw new Exception("Undefined property: $name");
+    public function disk()
+    {
+        return $this->disk;
     }
 
     /** @return boolean */

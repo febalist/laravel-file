@@ -17,7 +17,7 @@ class Image
     public function __construct(File $file)
     {
         $this->file = $file;
-        $this->image = SpatieImage::load($file->local);
+        $this->image = SpatieImage::load($file->local());
     }
 
     public function __call($method, $arguments)
