@@ -434,18 +434,6 @@ class File
         return "https://febalist.github.io/viewer/?url=$url&name=$name";
     }
 
-    /** @deprecated */
-    public function preview($embedded = false)
-    {
-        return $this->view();
-    }
-
-    /** @deprecated */
-    public function embedded()
-    {
-        return $this->preview(true);
-    }
-
     public function icon($size = 128)
     {
         return "https://raw.githubusercontent.com/eagerterrier/MimeTypes-Link-Icons/master/images/{$this->extension()}-icon-{$size}x{$size}.png";
