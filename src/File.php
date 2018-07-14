@@ -185,7 +185,7 @@ class File
     public static function slugName($filename)
     {
         $name = str_slug(pathinfo($filename, PATHINFO_FILENAME), '_') ?: '_';
-        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         return $name.($extension ? ".$extension" : '');
     }
