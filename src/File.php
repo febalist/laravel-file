@@ -154,6 +154,13 @@ class File
         return $path;
     }
 
+    public static function pathDirectory($path)
+    {
+        $dir = pathinfo($path, PATHINFO_DIRNAME);
+
+        return $dir == '.' ? '' : $dir;
+    }
+
     public static function fileName($file, $slug = false)
     {
         if ($file instanceof File) {
@@ -373,9 +380,7 @@ class File
     /** @return string */
     public function directory()
     {
-        $dir = pathinfo($this->path, PATHINFO_DIRNAME);
-
-        return $dir == '.' ? '' : $dir;
+        return static::pathDirectory($this->path);
     }
 
     /** @return string */
