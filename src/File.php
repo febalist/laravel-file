@@ -3,6 +3,7 @@
 namespace Febalist\Laravel\File;
 
 use Carbon\Carbon;
+use Exception;
 use File as FileHelper;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
@@ -283,7 +284,10 @@ class File
     /** @return static */
     public function copy($path, $disk = null)
     {
-        return static::put($this, $path, $disk ?: $this->disk);
+        $file = static::put($this, $path, $disk ?: $this->disk);
+        throw_unless($file->exists(), new Exception('Can not copy file'));
+        
+        return $file;
     }
 
     /** @return static */
