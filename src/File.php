@@ -112,7 +112,9 @@ class File
             static::putFile($file, $path, $disk, $delete);
         }
 
-        return new static($path, $disk);
+        $file = new static($path, $disk);
+
+        return $file->exists() ? $file : null;
     }
 
     public static function pathJoin(...$path)
@@ -284,10 +286,7 @@ class File
     /** @return static */
     public function copy($path, $disk = null)
     {
-        $file = static::put($this, $path, $disk ?: $this->disk);
-        throw_unless($file->exists(), new Exception('Can not copy file'));
-        
-        return $file;
+        return static::put($this, $path, $disk ?: $this->disk);
     }
 
     /** @return static */
@@ -320,7 +319,8 @@ class File
         if ($disk == $this->disk) {
             $this->storage()->move($this->path, $path);
         } else {
-            $this->copy($path, $disk);
+            $file = $this->copy($path, $disk);
+            throw_unless($file, new Exception('Can not move file'));
             $this->delete();
         }
 
