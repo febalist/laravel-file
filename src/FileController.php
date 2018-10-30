@@ -16,17 +16,16 @@ class FileController extends Controller
         $file = File::load($path, $disk, true);
         abort_unless($file, 404);
 
-        return $file->response();
+        return $file->response(request('name'));
     }
 
     public function gallery($uuid)
     {
         $files = cache("febalist.file:gallery:$uuid", []);
-
         abort_unless($files, 404);
 
         $files = array_map(function ($file) {
-            return new File($file[0], $file[1]);
+            return new File(...$file);
         }, $files);
 
         return view('file::gallery', compact('files'));
@@ -38,7 +37,7 @@ class FileController extends Controller
         abort_unless($files, 404);
 
         $files = array_map(function ($file) {
-            return new File($file[0], $file[1]);
+            return new File(...$file);
         }, $files);
 
         return File::zip($files, $name);

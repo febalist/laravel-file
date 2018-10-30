@@ -25,11 +25,13 @@ class File
 
     protected $path;
     protected $disk;
+    protected $name;
 
-    public function __construct($path, $disk)
+    public function __construct($path, $disk, $name = null)
     {
         $this->path = static::pathJoin($path);
         $this->disk = static::diskName($disk);
+        $this->name = $name ?? basename($this->path);
     }
 
     /** @return string */
@@ -42,7 +44,7 @@ class File
         $uuid = (string) Str::uuid();
         cache([
             "febalist.file:gallery:$uuid" => $files->map(function (File $file) {
-                return [$file->path, $file->disk];
+                return [$file->path, $file->disk, $file->name(true)];
             })->toArray(),
         ], 1);
 
@@ -55,10 +57,10 @@ class File
             $files = collect(array_wrap($files));
         }
 
-        $name = static::slugName(str_finish($name, '.zip'));
+        $name = str_finish($name, '.zip');
         $zip = new ZipStream($name);
         $files->each(function (File $file) use ($zip) {
-            $zip->addFileFromStream($file->name(), $file->stream());
+            $zip->addFileFromStream($file->name(true), $file->stream());
         });
         $zip->finish();
     }
@@ -72,7 +74,7 @@ class File
         $uuid = (string) Str::uuid();
         cache([
             "febalist.file:zip:$uuid" => $files->map(function (File $file) {
-                return [$file->path, $file->disk];
+                return [$file->path, $file->disk, $file->name(true)];
             })->toArray(),
         ], 5);
 
@@ -150,7 +152,7 @@ class File
     public static function fileName($file, $slug = false)
     {
         if ($file instanceof File) {
-            $name = $file->name();
+            $name = $file->name(true);
         } elseif (is_resource($file)) {
             $name = basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
         } elseif (is_string($file)) {
@@ -349,9 +351,9 @@ class File
     }
 
     /** @return string */
-    public function name()
+    public function name($original = false)
     {
-        return basename($this->path);
+        return $original ? $this->name : basename($this->path);
     }
 
     /** @return string */
@@ -375,9 +377,11 @@ class File
     /** @return StreamedResponse */
     public function response($filename = null, $headers = [])
     {
-        $filename = File::slugName($filename ?: $this->name());
+        $filename = $filename ?: $this->name(true);
 
-        return $this->storage()->response($this->path, $filename, $headers);
+        return response()->streamDownload(function () {
+            return $this->stream();
+        }, $filename, $headers);
     }
 
     /** @return string|false */
@@ -420,14 +424,18 @@ class File
             return $url;
         }
 
-        return URL::signedRoute('file.download', [$this->disk, $this->path], $expiration);
+        return URL::signedRoute('file.download', [
+            $this->disk,
+            $this->path,
+            'name' => $this->name(true),
+        ], $expiration);
     }
 
     /** @return string */
     public function view($expiration = null)
     {
         $url = urlencode($this->url());
-        $name = urlencode($this->name());
+        $name = urlencode($this->name(true));
 
         return "https://febalist.github.io/viewer/?url=$url&name=$name";
     }
