@@ -17,7 +17,6 @@ use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use URL;
 use ZipStream\ZipStream;
 
 class File
@@ -444,7 +443,7 @@ class File
 
     public function streamUrl($expiration = null, $name = null)
     {
-        return URL::signedRoute('file.stream', [
+        return route_signed('file.stream', [
             'disk' => $this->disk,
             'path' => $this->path,
             'name' => $name ?: $this->name(true),
@@ -453,7 +452,7 @@ class File
 
     public function downloadUrl($expiration = null, $name = null)
     {
-        return URL::signedRoute('file.download', [
+        return route_signed('file.download', [
             'disk' => $this->disk,
             'path' => $this->path,
             'name' => $name ?: $this->name(true),
