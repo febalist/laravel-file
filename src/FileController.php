@@ -8,15 +8,21 @@ class FileController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('signed')->only('download');
+        $this->middleware('signed')->only('download', 'stream');
     }
 
     public function download($disk, $path)
     {
-        $file = File::load($path, $disk, true);
-        abort_unless($file, 404);
+        $file = $this->loadFile($disk, $path);
 
-        return $file->response(request('name'));
+        return $file->response(request('name'), [], true);
+    }
+
+    public function stream($disk, $path)
+    {
+        $file = $this->loadFile($disk, $path);
+
+        return $file->response(request('name'), [], false);
     }
 
     public function gallery($uuid)
@@ -41,5 +47,13 @@ class FileController extends Controller
         }, $files);
 
         return File::zip($files, $name);
+    }
+
+    protected function loadFile($disk, $path)
+    {
+        $file = File::load($path, $disk, true);
+        abort_unless($file, 404);
+
+        return $file;
     }
 }

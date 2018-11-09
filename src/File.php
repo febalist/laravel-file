@@ -15,6 +15,7 @@ use RuntimeException;
 use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use URL;
 use ZipStream\ZipStream;
@@ -369,19 +370,33 @@ class File
     }
 
     /** @return resource */
-    public function stream()
+    public function stream($send = false)
     {
-        return $this->storage()->readStream($this->path);
+        $resource = $this->storage()->readStream($this->path);
+
+        if ($send) {
+            fpassthru($resource);
+        }
+
+        return $resource;
     }
 
     /** @return StreamedResponse */
-    public function response($filename = null, $headers = [])
+    public function response($filename = null, $headers = [], $download = false)
     {
         $filename = $filename ?: $this->name(true);
+        $disposition = $download ? ResponseHeaderBag::DISPOSITION_ATTACHMENT : ResponseHeaderBag::DISPOSITION_INLINE;
+        $headers = [
+            'Content-Type' => $this->mime(),
+            'Content-Length' => $this->size(),
+            'Content-Disposition' => "$disposition; filename=\"$filename\"",
+        ];
 
-        return response()->streamDownload(function () {
-            return $this->stream();
-        }, $filename, $headers);
+        $callback = function () {
+            return $this->stream(true);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /** @return string|false */
@@ -424,18 +439,32 @@ class File
             return $url;
         }
 
+        return $this->streamUrl($expiration);
+    }
+
+    public function streamUrl($expiration = null, $name = null)
+    {
+        return URL::signedRoute('file.stream', [
+            'disk' => $this->disk,
+            'path' => $this->path,
+            'name' => $name ?: $this->name(true),
+        ], $expiration);
+    }
+
+    public function downloadUrl($expiration = null, $name = null)
+    {
         return URL::signedRoute('file.download', [
-            $this->disk,
-            $this->path,
-            'name' => $this->name(true),
+            'disk' => $this->disk,
+            'path' => $this->path,
+            'name' => $name ?: $this->name(true),
         ], $expiration);
     }
 
     /** @return string */
-    public function view($expiration = null)
+    public function view($expiration = null, $name = null)
     {
-        $url = urlencode($this->url());
-        $name = urlencode($this->name(true));
+        $url = urlencode($this->url($expiration));
+        $name = urlencode($name ?: $this->name(true));
 
         return "https://febalist.github.io/viewer/?url=$url&name=$name";
     }
