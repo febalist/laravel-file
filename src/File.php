@@ -23,6 +23,93 @@ class File
 {
     use InteractsWithTime;
 
+    const ICONS = [
+        '3g2',
+        '3gp',
+        'ai',
+        'air',
+        'asf',
+        'avi',
+        'bib',
+        'cls',
+        'csv',
+        'deb',
+        'djvu',
+        'dmg',
+        'doc',
+        'docx',
+        'dwf',
+        'dwg',
+        'eps',
+        'epub',
+        'exe',
+        'f',
+        'f77',
+        'f90',
+        'flac',
+        'flv',
+        'gif',
+        'gz',
+        'ico',
+        'indd',
+        'iso',
+        'jpg',
+        'jpeg',
+        'key',
+        'log',
+        'm4a',
+        'm4v',
+        'midi',
+        'mkv',
+        'mov',
+        'mp3',
+        'mp4',
+        'mpeg',
+        'mpg',
+        'msi',
+        'odp',
+        'ods',
+        'odt',
+        'oga',
+        'ogg',
+        'ogv',
+        'pdf',
+        'png',
+        'pps',
+        'ppsx',
+        'ppt',
+        'pptx',
+        'psd',
+        'pub',
+        'py',
+        'qt',
+        'ra',
+        'ram',
+        'rar',
+        'rm',
+        'rpm',
+        'rtf',
+        'rv',
+        'skp',
+        'spx',
+        'sql',
+        'sty',
+        'tar',
+        'tex',
+        'tgz',
+        'tiff',
+        'ttf',
+        'txt',
+        'vob',
+        'wav',
+        'wmv',
+        'xls',
+        'xlsx',
+        'xml',
+        'xpi',
+        'zip',
+    ];
+
     protected $path;
     protected $disk;
     protected $name;
@@ -364,7 +451,7 @@ class File
     /** @return string */
     public function extension()
     {
-        return static::pathExtension($this->name());
+        return static::pathExtension($this->name(true));
     }
 
     /** @return integer */
@@ -475,7 +562,12 @@ class File
 
     public function iconUrl($size = 128)
     {
-        return "https://raw.githubusercontent.com/eagerterrier/MimeTypes-Link-Icons/master/images/{$this->extension()}-icon-{$size}x{$size}.png";
+        $extension = $this->extension();
+        if (in_array($extension, static::ICONS)) {
+            return "https://raw.githubusercontent.com/eagerterrier/MimeTypes-Link-Icons/master/images/$extension-icon-{$size}x{$size}.png";
+        }
+
+        return "https://img.icons8.com/material/$size/888888/file.png";
     }
 
     /** @return FilesystemAdapter */
