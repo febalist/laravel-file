@@ -182,6 +182,11 @@ class File
         return static::extensionMime($extension);
     }
 
+    public static function pathFilename($path)
+    {
+        return pathinfo($path, PATHINFO_FILENAME);
+    }
+
     public static function pathExtension($path)
     {
         return strtolower(pathinfo($path, PATHINFO_EXTENSION));
@@ -189,8 +194,8 @@ class File
 
     public static function slugName($filename)
     {
-        $name = str_slug(pathinfo($filename, PATHINFO_FILENAME), '_') ?: '_';
-        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        $name = str_slug(static::pathFilename($filename), '_') ?: '_';
+        $extension = strtolower(static::pathExtension($filename));
 
         return $name.($extension ? ".$extension" : '');
     }
