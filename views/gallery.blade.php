@@ -10,8 +10,8 @@
     @if($file->type() == 'image')
       <a href="{{ $file->url() }}"></a>
     @else
-      <div data-thumb="{{ $file->icon() }}">
-        <iframe src="{{ $file->view() }}"></iframe>
+      <div data-thumb="{{ $file->iconUrl() }}">
+        <iframe src="{{ $file->viewUrl() }}"></iframe>
       </div>
     @endif
   @endforeach

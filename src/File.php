@@ -343,7 +343,7 @@ class File
         return $this->move([$this->directory(), $name]);
     }
 
-    /** @return string */
+    /** @return string|bool */
     public function local()
     {
         return realpath($this->storage()->path($this->path));
@@ -465,7 +465,7 @@ class File
     }
 
     /** @return string */
-    public function view($expiration = null, $name = null)
+    public function viewUrl($expiration = null, $name = null)
     {
         $url = urlencode($this->url($expiration));
         $name = urlencode($name ?: $this->name(true));
@@ -473,7 +473,7 @@ class File
         return "https://febalist.github.io/viewer/?url=$url&name=$name";
     }
 
-    public function icon($size = 128)
+    public function iconUrl($size = 128)
     {
         return "https://raw.githubusercontent.com/eagerterrier/MimeTypes-Link-Icons/master/images/{$this->extension()}-icon-{$size}x{$size}.png";
     }
