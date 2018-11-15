@@ -3,7 +3,7 @@
 namespace Febalist\Laravel\File;
 
 use Carbon\Carbon;
-use Exception;
+use Febalist\Laravel\File\Exceptions\CannotPutFileException;
 use File as FileHelper;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
@@ -203,7 +203,9 @@ class File
 
         $file = new static($path, $disk);
 
-        return $file->exists() ? $file : null;
+        throw_unless($file->exists(), CannotPutFileException::class);
+
+        return $file;
     }
 
     public static function pathJoin(...$path)
@@ -413,8 +415,7 @@ class File
         if ($disk == $this->disk) {
             $this->storage()->move($this->path, $path);
         } else {
-            $file = $this->copy($path, $disk);
-            throw_unless($file, new Exception('Can not move file'));
+            $this->copy($path, $disk);
             $this->delete();
         }
 
