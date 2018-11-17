@@ -586,4 +586,10 @@ class File
 
         return null;
     }
+
+    /** @return string */
+    public function sha1()
+    {
+        return sha1_file($this->local() ?: $this->url()) ?: null;
+    }
 }
