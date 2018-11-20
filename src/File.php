@@ -493,4 +493,10 @@ class File
 
         return null;
     }
+
+    /** @return integer */
+    public function timestamp()
+    {
+        return $this->storage()->getTimestamp($this->path);
+    }
 }
