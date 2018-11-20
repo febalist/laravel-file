@@ -499,4 +499,10 @@ class File
     {
         return $this->storage()->getTimestamp($this->path);
     }
+
+    /** @return Carbon */
+    public function time()
+    {
+        return carbon($this->timestamp());
+    }
 }
