@@ -592,4 +592,10 @@ class File
     {
         return sha1_file($this->local() ?: $this->url()) ?: null;
     }
+
+    /** @return integer */
+    public function timestamp()
+    {
+        return $this->storage()->getTimestamp($this->path);
+    }
 }
