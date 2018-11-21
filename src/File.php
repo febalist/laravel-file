@@ -249,6 +249,16 @@ class File
         return static::mimey()->getExtension($mime);
     }
 
+    /** @return resource */
+    public static function resource($url)
+    {
+        return fopen($url, 'rb', false, stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+            ],
+        ]));
+    }
+
     protected static function putFile(SymfonyFile $file, $path, $disk, $delete = false)
     {
         Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
