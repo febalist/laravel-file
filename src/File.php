@@ -102,7 +102,7 @@ class File
         if ($file instanceof File) {
             $file = $file->stream();
         } elseif (is_string($file) && starts_with($file, ['http://', 'https://'])) {
-            $file = fopen($file, 'rb');
+            $file = static::resource($file);
         }
 
         if (is_resource($file)) {
@@ -151,10 +151,25 @@ class File
 
     public static function fileName($file, $slug = false)
     {
+        if (is_string($file) && starts_with($file, ['http://', 'https://'])) {
+            $file = static::resource($file);
+        }
+
+        $name = null;
+
         if ($file instanceof File) {
             $name = $file->name(true);
         } elseif (is_resource($file)) {
             $name = basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
+            $meta = stream_get_meta_data($file);
+            if ($meta['wrapper_data'] ?? null) {
+                foreach ($meta['wrapper_data'] as $header) {
+                    if (starts_with($header, 'Content-Disposition:')) {
+                        $name = str_between($header, 'filename="', '"');
+                    }
+                }
+            }
+            $name = $name ?: basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
         } elseif (is_string($file)) {
             $name = basename($file);
         } elseif ($file instanceof UploadedFile) {
