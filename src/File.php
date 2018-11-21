@@ -189,7 +189,11 @@ class File
         if ($file instanceof File) {
             $file = $file->stream();
         } elseif (is_string($file) && starts_with($file, ['http://', 'https://'])) {
-            $file = fopen($file, 'rb');
+            $file = fopen($file, 'rb', false, stream_context_create([
+                'ssl' => [
+                    'verify_peer' => false,
+                ],
+            ]));
         }
 
         if (is_resource($file)) {
