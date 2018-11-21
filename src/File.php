@@ -165,6 +165,8 @@ class File
             throw new RuntimeException('Invalid file');
         }
 
+        $name = str_before($name, '?');
+
         return $slug ? static::slugName($name) : $name;
     }
 
