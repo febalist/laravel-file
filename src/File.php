@@ -191,7 +191,7 @@ class File
         } elseif (is_string($file) && starts_with($file, ['http://', 'https://'])) {
             $file = static::resource($file);
         }
-        
+
         if (is_resource($file)) {
             static::putStream($file, $path, $disk);
         } else {
@@ -335,10 +335,8 @@ class File
 
     public static function diskName($name)
     {
-        if ($name == 'default') {
-            return config('filesystems.default');
-        } elseif ($name == 'cloud') {
-            return config('filesystems.cloud');
+        if (in_array($name, ['default', 'cloud'])) {
+            return config("filesystems.$name");
         }
 
         return $name;
@@ -619,15 +617,17 @@ class File
         return sha1_file($this->local() ?: $this->url()) ?: null;
     }
 
-    /** @return integer */
+    /** @return integer|null */
     public function timestamp()
     {
-        return $this->storage()->getTimestamp($this->path);
+        return $this->exists() ? $this->storage()->getTimestamp($this->path) : null;
     }
 
-    /** @return Carbon */
+    /** @return Carbon|null */
     public function time()
     {
-        return carbon($this->timestamp());
+        $timestamp = $this->timestamp();
+
+        return $timestamp ? Carbon::createFromTimestamp($timestamp) : null;
     }
 }
