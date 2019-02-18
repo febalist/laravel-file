@@ -638,6 +638,12 @@ class File
 
     public function write($contents)
     {
+        $directory = $this->directory();
+
+        if (!$this->storage()->exists($directory)) {
+            $this->storage()->createDir($directory);
+        }
+
         $this->storage()->write($this->path, $contents);
     }
 }
