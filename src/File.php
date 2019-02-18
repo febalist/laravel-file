@@ -3,7 +3,7 @@
 namespace Febalist\Laravel\File;
 
 use Carbon\Carbon;
-use Febalist\Laravel\File\Exceptions\CannotPutFileException;
+use Febalist\Laravel\File\Exceptions\CannotSaveFileException;
 use File as FileHelper;
 use Illuminate\Http\File as IlluminateFile;
 use Illuminate\Support\Collection;
@@ -117,6 +117,12 @@ class File extends StoragePath
         $this->name = $name ?? basename($this->path);
     }
 
+    /** @return static */
+    public static function temp($extension = null)
+    {
+        return static::create(null, static::tempPath($extension), 'local');
+    }
+
     /** @return string */
     public static function galleryUrl($files)
     {
@@ -165,11 +171,17 @@ class File extends StoragePath
     }
 
     /** @return static */
+    public static function create($contents, $path, $disk = 'default')
+    {
+        $file = new static($path, $disk);
+        $file->write($contents);
+
+        return $file;
+    }
+
+    /** @return static */
     public static function put($source, $path, $disk = 'default', $delete = false)
     {
-        $path = static::pathJoin($path);
-        $disk = static::diskName($disk);
-
         if (is_string($source)) {
             if (starts_with($source, ['http://', 'https://'])) {
                 $source = static::resource($source);
@@ -178,10 +190,7 @@ class File extends StoragePath
             }
         }
 
-        $file = new static($path, $disk);
-        $file->write($source);
-
-        throw_unless($file->exists(), CannotPutFileException::class);
+        $file = static::create($source, $path, $disk);
 
         if ($delete && $source instanceof SymfonyFile) {
             FileHelper::delete($source);
@@ -364,9 +373,11 @@ class File extends StoragePath
     /** @return static */
     public function copyTemp()
     {
-        $path = static::tempPath($this->extension());
+        $temp = static::temp($this->extension());
 
-        return static::put($this, $path, 'local');
+        $temp->write($this);
+
+        return $temp;
     }
 
     public function delete()
@@ -574,6 +585,10 @@ class File extends StoragePath
 
     public function write($contents)
     {
+        if (is_callable($contents)) {
+            return $this->transform($contents);
+        }
+
         if ($contents instanceof File) {
             $contents = $contents->stream();
         } elseif ($contents instanceof SymfonyFile) {
@@ -582,11 +597,15 @@ class File extends StoragePath
 
         $this->dir()->create();
 
+        $time = time();
+
         if (is_resource($contents)) {
             $this->storage()->putStream($this->path, $contents);
         } else {
             $this->storage()->put($this->path, $contents);
         }
+
+        throw_unless($this->timestamp() >= $time, CannotSaveFileException::class);
 
         return $this;
     }
