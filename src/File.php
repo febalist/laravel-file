@@ -630,4 +630,14 @@ class File
 
         return $timestamp ? Carbon::createFromTimestamp($timestamp) : null;
     }
+
+    public function read()
+    {
+        return $this->storage()->read($this->path);
+    }
+
+    public function write($contents)
+    {
+        $this->storage()->write($this->path, $contents);
+    }
 }
