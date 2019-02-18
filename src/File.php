@@ -11,7 +11,6 @@ use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
 use Mimey\MimeTypes;
 use RuntimeException;
-use Storage;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -166,29 +165,27 @@ class File extends StoragePath
     }
 
     /** @return static */
-    public static function put($file, $path, $disk = 'default', $delete = false)
+    public static function put($source, $path, $disk = 'default', $delete = false)
     {
         $path = static::pathJoin($path);
         $disk = static::diskName($disk);
 
-        if ($file instanceof File) {
-            $file = $file->stream();
-        } elseif (is_string($file) && starts_with($file, ['http://', 'https://'])) {
-            $file = static::resource($file);
-        }
-
-        if (is_resource($file)) {
-            static::putStream($file, $path, $disk);
-        } else {
-            if (!$file instanceof SymfonyFile) {
-                $file = new IlluminateFile($file);
+        if (is_string($source)) {
+            if (starts_with($source, ['http://', 'https://'])) {
+                $source = static::resource($source);
+            } else {
+                $source = new IlluminateFile($source);
             }
-            static::putFile($file, $path, $disk, $delete);
         }
 
         $file = new static($path, $disk);
+        $file->write($source);
 
         throw_unless($file->exists(), CannotPutFileException::class);
+
+        if ($delete && $source instanceof SymfonyFile) {
+            FileHelper::delete($source);
+        }
 
         return $file;
     }
@@ -345,20 +342,6 @@ class File extends StoragePath
                 'verify_peer' => false,
             ],
         ]));
-    }
-
-    protected static function putFile(SymfonyFile $file, $path, $disk, $delete = false)
-    {
-        Storage::disk($disk)->putFileAs(dirname($path), $file, basename($path));
-
-        if ($delete) {
-            FileHelper::delete($file);
-        }
-    }
-
-    protected static function putStream($resource, $path, $disk)
-    {
-        Storage::disk($disk)->putStream($path, $resource);
     }
 
     protected static function mimey()
@@ -587,8 +570,21 @@ class File extends StoragePath
 
     public function write($contents)
     {
+        if ($contents instanceof File) {
+            $contents = $contents->stream();
+        } elseif ($contents instanceof SymfonyFile) {
+            $contents = fopen($contents, 'r');
+        }
+
         $this->dir()->create();
-        $this->storage()->write($this->path, $contents);
+
+        if (is_resource($contents)) {
+            $this->storage()->putStream($this->path, $contents);
+        } else {
+            $this->storage()->put($this->path, $contents);
+        }
+
+        return $this;
     }
 
     /** @deprecated */
