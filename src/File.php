@@ -637,7 +637,7 @@ class File extends StoragePath
 
         if ($update) {
             if ($copy->exists()) {
-                $this->write($copy);
+                $copy->move($this);
             } else {
                 $this->delete();
             }
