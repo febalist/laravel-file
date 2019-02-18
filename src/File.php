@@ -5,7 +5,6 @@ namespace Febalist\Laravel\File;
 use Carbon\Carbon;
 use Febalist\Laravel\File\Exceptions\CannotPutFileException;
 use File as FileHelper;
-use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File as IlluminateFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\InteractsWithTime;
@@ -19,7 +18,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipStream\ZipStream;
 
-class File
+class File extends StoragePath
 {
     use InteractsWithTime;
 
@@ -110,8 +109,6 @@ class File
         'zip',
     ];
 
-    protected $path;
-    protected $disk;
     protected $name;
 
     public function __construct($path, $disk, $name = null)
@@ -166,18 +163,6 @@ class File
         ], 5);
 
         return route('file.zip', [$uuid, $name]);
-    }
-
-    /** @return static|null */
-    public static function load($path, $disk = 'default', $check = false)
-    {
-        $file = new static($path, $disk);
-
-        if ($check && !$file->exists()) {
-            return null;
-        }
-
-        return $file;
     }
 
     /** @return static */
@@ -381,22 +366,6 @@ class File
         return new MimeTypes();
     }
 
-    public function path()
-    {
-        return $this->path;
-    }
-
-    public function disk()
-    {
-        return $this->disk;
-    }
-
-    /** @return boolean */
-    public function exists()
-    {
-        return $this->storage()->exists($this->path);
-    }
-
     /** @return static|null */
     public function neighbor($path, $check = false)
     {
@@ -595,12 +564,6 @@ class File
         return "https://img.icons8.com/material/$size/888888/file.png";
     }
 
-    /** @return FilesystemAdapter */
-    public function storage()
-    {
-        return Storage::disk($this->disk);
-    }
-
     /** @return Image|null */
     public function image()
     {
@@ -615,20 +578,6 @@ class File
     public function sha1()
     {
         return sha1_file($this->local() ?: $this->url()) ?: null;
-    }
-
-    /** @return integer|null */
-    public function timestamp()
-    {
-        return $this->exists() ? $this->storage()->getTimestamp($this->path) : null;
-    }
-
-    /** @return Carbon|null */
-    public function time()
-    {
-        $timestamp = $this->timestamp();
-
-        return $timestamp ? Carbon::createFromTimestamp($timestamp) : null;
     }
 
     public function read()
