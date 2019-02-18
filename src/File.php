@@ -375,7 +375,9 @@ class File extends StoragePath
     {
         $temp = static::temp($this->extension());
 
-        $temp->write($this);
+        if ($this->exists()) {
+            $temp->write($this);
+        }
 
         return $temp;
     }
