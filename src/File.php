@@ -587,12 +587,13 @@ class File extends StoragePath
 
     public function write($contents)
     {
-        $directory = $this->directory();
-
-        if (!$this->storage()->exists($directory)) {
-            $this->storage()->createDir($directory);
-        }
-
+        $this->dir()->create();
         $this->storage()->write($this->path, $contents);
+    }
+
+    /** @deprecated */
+    protected function dir()
+    {
+        return Directory::load($this->directory(), $this->disk);
     }
 }

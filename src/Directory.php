@@ -14,4 +14,9 @@ class Directory extends StoragePath
     {
         $this->storage()->deleteDirectory($this->path);
     }
+
+    public function create()
+    {
+        $this->storage()->createDir($this->path);
+    }
 }
