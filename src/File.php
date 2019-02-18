@@ -591,6 +591,32 @@ class File extends StoragePath
         return $this;
     }
 
+    public function manipulate(callable $callback, $update = false)
+    {
+        $copy = $this->copyTemp();
+
+        $callback($copy, $copy->local());
+
+        if ($update) {
+            if ($copy->exists()) {
+                $this->write($copy);
+            } else {
+                $this->delete();
+            }
+        }
+
+        if ($copy->exists()) {
+            $copy->delete();
+        }
+
+        return $this;
+    }
+
+    public function transform(callable $callback)
+    {
+        return $this->manipulate($callback, true);
+    }
+
     /** @deprecated */
     protected function dir()
     {
