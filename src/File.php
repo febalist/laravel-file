@@ -378,8 +378,18 @@ class File extends StoragePath
             return $this;
         }
 
+        if ($file = static::load($path, $disk, true)) {
+            $file->delete();
+        }
+
         if ($disk == $this->disk) {
+            Directory::load(static::pathDirectory($path), $disk)->create();
+
+            $time = time();
+
             $this->storage()->copy($this->path, $path);
+
+            $this->checkSaved($time);
 
             return static::load($path, $disk);
         } else {
@@ -418,8 +428,18 @@ class File extends StoragePath
             return $this;
         }
 
+        if ($file = static::load($path, $disk, true)) {
+            $file->delete();
+        }
+
         if ($disk == $this->disk) {
+            Directory::load(static::pathDirectory($path), $disk)->create();
+
+            $time = time();
+
             $this->storage()->move($this->path, $path);
+
+            $this->checkSaved($time);
         } else {
             $this->copy($path, $disk);
             $this->delete();
@@ -605,59 +625,58 @@ class File extends StoragePath
     public function write($contents)
     {
         if (is_callable($contents)) {
-            return $this->transform($contents);
-        }
-
-        if ($contents instanceof File) {
-            $contents = $contents->stream();
-        } elseif ($contents instanceof SymfonyFile) {
-            $contents = fopen($contents, 'r');
-        }
-
-        $this->dir()->create();
-
-        $time = time();
-
-        if (is_resource($contents)) {
-            $this->storage()->putStream($this->path, $contents);
+            static::temp()->transform($contents)->move($this);
         } else {
-            $this->storage()->put($this->path, $contents);
-        }
+            if ($contents instanceof File) {
+                $contents = $contents->stream();
+            } elseif ($contents instanceof SymfonyFile) {
+                $contents = fopen($contents, 'r');
+            }
 
-        throw_unless($this->timestamp() >= $time, CannotSaveFileException::class);
+            Directory::load($this->directory(), $this->disk)->create();
+
+            $time = time();
+
+            if (is_resource($contents)) {
+                $this->storage()->putStream($this->path, $contents);
+            } else {
+                $this->storage()->put($this->path, $contents);
+            }
+
+            $this->checkSaved($time);
+        }
 
         return $this;
     }
 
-    public function manipulate(callable $callback, $update = false)
+    public function fetch(callable $callback, $update = false)
     {
         $copy = $this->copyTemp();
 
-        $callback($copy->local());
+        $result = $callback($copy->local());
 
         if ($update) {
-            if ($copy->exists()) {
-                $copy->move($this);
-            } else {
-                $this->delete();
-            }
+            $copy->move($this);
         }
 
         if ($copy->exists()) {
             $copy->delete();
         }
 
-        return $this;
+        return $result;
     }
 
     public function transform(callable $callback)
     {
-        return $this->manipulate($callback, true);
+        $this->fetch($callback, true);
+
+        return $this;
     }
 
-    /** @deprecated */
-    protected function dir()
+    protected function checkSaved($time)
     {
-        return Directory::load($this->directory(), $this->disk);
+        if ($this->timestamp() < $time) {
+            throw new CannotSaveFileException();
+        }
     }
 }
