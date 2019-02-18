@@ -410,7 +410,11 @@ class File extends StoragePath
     /** @return string|bool */
     public function local()
     {
-        return realpath($this->storage()->path($this->path));
+        if (config("filesystems.disks.$this->disk.driver") != 'local') {
+            return false;
+        }
+
+        return $this->storage()->path($this->path);
     }
 
     /** @return string */
