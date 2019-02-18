@@ -638,6 +638,11 @@ class File extends StoragePath
         return $this->manipulate($callback, true);
     }
 
+    public function to(File $file)
+    {
+        return $this->move($file->path, $file->disk);
+    }
+
     /** @deprecated */
     protected function dir()
     {
