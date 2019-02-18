@@ -595,7 +595,7 @@ class File extends StoragePath
     {
         $copy = $this->copyTemp();
 
-        $callback($copy, $copy->local());
+        $callback($copy->local());
 
         if ($update) {
             if ($copy->exists()) {
