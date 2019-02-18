@@ -367,6 +367,10 @@ class File extends StoragePath
     /** @return static */
     public function copy($path, $disk = null)
     {
+        if (func_num_args() == 1 && $path instanceof File) {
+            return $this->copy($path->path, $path->disk);
+        }
+
         return static::put($this, $path, $disk ?: $this->disk);
     }
 
@@ -390,6 +394,10 @@ class File extends StoragePath
     /** @return static */
     public function move($path, $disk = null)
     {
+        if (func_num_args() == 1 && $path instanceof File) {
+            return $this->move($path->path, $path->disk);
+        }
+
         $path = static::pathJoin($path);
         $disk = static::diskName($disk ?: $this->disk);
 
@@ -636,11 +644,6 @@ class File extends StoragePath
     public function transform(callable $callback)
     {
         return $this->manipulate($callback, true);
-    }
-
-    public function to(File $file)
-    {
-        return $this->move($file->path, $file->disk);
     }
 
     /** @deprecated */
