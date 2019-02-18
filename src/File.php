@@ -371,7 +371,20 @@ class File extends StoragePath
             return $this->copy($path->path, $path->disk);
         }
 
-        return static::put($this, $path, $disk ?: $this->disk);
+        $path = static::pathJoin($path);
+        $disk = static::diskName($disk ?: $this->disk);
+
+        if ($disk == $this->disk && $path == $this->path) {
+            return $this;
+        }
+
+        if ($disk == $this->disk) {
+            $this->storage()->copy($this->path, $path);
+
+            return static::load($path, $disk);
+        } else {
+            return static::put($this, $path, $disk);
+        }
     }
 
     /** @return static */
@@ -380,7 +393,7 @@ class File extends StoragePath
         $temp = static::temp($this->extension());
 
         if ($this->exists()) {
-            $temp->write($this);
+            $this->copy($temp);
         }
 
         return $temp;
@@ -403,10 +416,6 @@ class File extends StoragePath
 
         if ($disk == $this->disk && $path == $this->path) {
             return $this;
-        }
-
-        if ($file = static::load($path, $disk, true)) {
-            $file->delete();
         }
 
         if ($disk == $this->disk) {
