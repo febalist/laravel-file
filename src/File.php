@@ -365,36 +365,69 @@ class File extends StoragePath
     }
 
     /** @return static */
-    public function copy($path, $disk = null)
+    public function move($path, $disk = null)
     {
         if (func_num_args() == 1 && $path instanceof File) {
-            return $this->copy($path->path, $path->disk);
+            $target = $path;
+        } else {
+            $target = static::load($path, $disk ?? $this->disk);
         }
 
-        $path = static::pathJoin($path);
-        $disk = static::diskName($disk ?: $this->disk);
-
-        if ($disk == $this->disk && $path == $this->path) {
+        if ($target->disk == $this->disk && $target->path == $this->path) {
             return $this;
         }
 
-        if ($file = static::load($path, $disk, true)) {
-            $file->delete();
+        if ($target->exists()) {
+            $target->delete();
         }
 
-        if ($disk == $this->disk) {
-            Directory::load(static::pathDirectory($path), $disk)->create();
+        if ($target->disk == $this->disk) {
+            $target->dir()->create();
+
+            $this->storage()->move($this->path, $target->path);
+
+            $target->checkExists();
+        } else {
+            $this->copy($target);
+            $this->delete();
+        }
+
+        $this->path = $target->path;
+        $this->disk = $target->disk;
+
+        return $this;
+    }
+
+    /** @return static */
+    public function copy($path, $disk = null)
+    {
+        if (func_num_args() == 1 && $path instanceof File) {
+            $target = $path;
+        } else {
+            $target = static::load($path, $disk ?? $this->disk);
+        }
+
+        if ($target->disk == $this->disk && $target->path == $this->path) {
+            return $this;
+        }
+
+        if ($target->exists()) {
+            $target->delete();
+        }
+
+        if ($target->disk == $this->disk) {
+            $target->dir()->create();
 
             $time = time();
 
-            $this->storage()->copy($this->path, $path);
+            $this->storage()->copy($this->path, $target->path);
 
-            $this->checkSaved($time);
-
-            return static::load($path, $disk);
+            $target->checkChanged($time);
         } else {
-            return static::put($this, $path, $disk);
+            $target->write($this);
         }
+
+        return $target;
     }
 
     /** @return static */
@@ -412,43 +445,6 @@ class File extends StoragePath
     public function delete()
     {
         $this->storage()->delete($this->path);
-    }
-
-    /** @return static */
-    public function move($path, $disk = null)
-    {
-        if (func_num_args() == 1 && $path instanceof File) {
-            return $this->move($path->path, $path->disk);
-        }
-
-        $path = static::pathJoin($path);
-        $disk = static::diskName($disk ?: $this->disk);
-
-        if ($disk == $this->disk && $path == $this->path) {
-            return $this;
-        }
-
-        if ($file = static::load($path, $disk, true)) {
-            $file->delete();
-        }
-
-        if ($disk == $this->disk) {
-            Directory::load(static::pathDirectory($path), $disk)->create();
-
-            $time = time();
-
-            $this->storage()->move($this->path, $path);
-
-            $this->checkSaved($time);
-        } else {
-            $this->copy($path, $disk);
-            $this->delete();
-        }
-
-        $this->path = $path;
-        $this->disk = $disk;
-
-        return $this;
     }
 
     /** @return static */
@@ -633,7 +629,7 @@ class File extends StoragePath
                 $contents = fopen($contents, 'r');
             }
 
-            Directory::load($this->directory(), $this->disk)->create();
+            $this->dir()->create();
 
             $time = time();
 
@@ -643,7 +639,7 @@ class File extends StoragePath
                 $this->storage()->put($this->path, $contents);
             }
 
-            $this->checkSaved($time);
+            $this->checkChanged($time);
         }
 
         return $this;
@@ -673,10 +669,19 @@ class File extends StoragePath
         return $this;
     }
 
-    protected function checkSaved($time)
+    protected function checkExists()
     {
-        if ($this->timestamp() < $time) {
-            throw new CannotSaveFileException();
-        }
+        throw_unless($this->exists(), CannotSaveFileException::class);
+    }
+
+    protected function checkChanged($from)
+    {
+        throw_unless($this->timestamp() >= $from, CannotSaveFileException::class);
+    }
+
+    /** @deprecated */
+    protected function dir($check = false)
+    {
+        return Directory::load(static::pathDirectory($this->path), $this->disk, $check);
     }
 }
