@@ -447,6 +447,8 @@ class File extends StoragePath
     public function delete()
     {
         $this->storage()->delete($this->path);
+
+        return $this;
     }
 
     /** @return static */
