@@ -118,9 +118,15 @@ class File extends StoragePath
     }
 
     /** @return static */
-    public static function temp($extension = null)
+    public static function temp($extension = null, $exists = true)
     {
-        return static::create(null, static::tempPath($extension), 'local');
+        $path = static::tempPath($extension);
+
+        if ($exists) {
+            return static::create(null, $path, 'local');
+        } else {
+            return static::load($path, 'local');
+        }
     }
 
     /** @return string */
@@ -433,13 +439,9 @@ class File extends StoragePath
     /** @return static */
     public function copyTemp()
     {
-        $temp = static::temp($this->extension());
+        $temp = static::temp($this->extension(), false);
 
-        if ($this->exists()) {
-            $this->copy($temp);
-        }
-
-        return $temp;
+        return $this->copy($temp);
     }
 
     public function delete()
@@ -621,7 +623,11 @@ class File extends StoragePath
     public function write($contents)
     {
         if (is_callable($contents)) {
-            static::temp()->transform($contents)->move($this);
+            $temp = static::temp(null, false);
+            $contents($temp->local());
+            $temp->move($this);
+
+            return $this;
         } else {
             if ($contents instanceof File) {
                 $contents = $contents->stream();
