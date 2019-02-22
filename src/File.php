@@ -248,9 +248,17 @@ class File extends StoragePath
         } elseif (is_resource($file)) {
             $meta = stream_get_meta_data($file);
             if ($meta['wrapper_data'] ?? null) {
-                foreach ($meta['wrapper_data'] as $header) {
-                    if (starts_with($header, 'Content-Disposition:')) {
-                        $name = str_between($header, 'filename="', '"');
+                $headers = [];
+                foreach ($meta['wrapper_data'] as $data) {
+                    $headers[str_before($data, ':')] = str_after($data, ':');
+                }
+
+                if ($disposition = ($headers['Content-Disposition'] ?? null)) {
+                    $name = str_between($disposition, 'filename="', '"');
+                } elseif ($mime = ($headers['Content-Type'] ?? null)) {
+                    $extension = static::mimeExtension($mime);
+                    if ($extension) {
+                        $name = static::pathFilename($meta['uri'] ?? 'file').'.'.$extension;
                     }
                 }
             }
