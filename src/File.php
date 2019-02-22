@@ -432,11 +432,9 @@ class File extends StoragePath
         if ($target->disk == $this->disk) {
             $target->dir()->create();
 
-            $time = time();
-
             $this->storage()->copy($this->path, $target->path);
 
-            $target->checkChanged($time);
+            $target->checkExists();
         } else {
             $target->write($this);
         }
@@ -647,15 +645,13 @@ class File extends StoragePath
 
             $this->dir()->create();
 
-            $time = time();
-
             if (is_resource($contents)) {
                 $this->storage()->putStream($this->path, $contents);
             } else {
                 $this->storage()->put($this->path, $contents);
             }
 
-            $this->checkChanged($time);
+            $this->checkExists();
         }
 
         return $this;
@@ -688,11 +684,6 @@ class File extends StoragePath
     protected function checkExists()
     {
         throw_unless($this->exists(), CannotSaveFileException::class);
-    }
-
-    protected function checkChanged($from)
-    {
-        throw_unless($this->timestamp() >= $from, CannotSaveFileException::class);
     }
 
     /** @deprecated */
