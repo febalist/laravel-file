@@ -21,6 +21,9 @@ class File extends StoragePath
 {
     use InteractsWithTime;
 
+    const TEMP_DISK = 'local';
+    const TEMP_DIR = 'temp';
+
     const ICONS = [
         '3g2',
         '3gp',
@@ -123,9 +126,9 @@ class File extends StoragePath
         $path = static::tempPath($extension);
 
         if ($exists) {
-            return static::create(null, $path, 'local');
+            return static::create(null, $path, static::TEMP_DISK);
         } else {
-            return static::load($path, 'local');
+            return static::load($path, static::TEMP_DISK);
         }
     }
 
@@ -186,6 +189,14 @@ class File extends StoragePath
     }
 
     /** @return static */
+    public static function createTemp($contents, $extension = null)
+    {
+        $path = static::tempPath($extension);
+
+        return static::create($contents, $path, static::TEMP_DISK);
+    }
+
+    /** @return static */
     public static function put($source, $path, $disk = 'default', $delete = false)
     {
         if (is_string($source)) {
@@ -203,6 +214,14 @@ class File extends StoragePath
         }
 
         return $file;
+    }
+
+    /** @return static */
+    public static function putTemp($source, $delete = false)
+    {
+        $path = static::tempPath(static::pathExtension(static::fileName($source)));
+
+        return static::put($source, $path, static::TEMP_DISK, $delete);
     }
 
     public static function pathJoin(...$path)
@@ -320,7 +339,7 @@ class File extends StoragePath
 
     public static function tempDirectory($absolute = false)
     {
-        $name = 'temp';
+        $name = static::TEMP_DIR;
         $path = storage_path("app/$name");
         if (!FileHelper::exists($path)) {
             FileHelper::makeDirectory($path);
