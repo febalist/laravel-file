@@ -610,7 +610,7 @@ class File extends StoragePath
     /** @return string */
     public function viewUrl($expiration = null, $name = null)
     {
-        $url = urlencode($this->url($expiration));
+        $url = urlencode($this->streamUrl($expiration));
         $name = urlencode($name ?: $this->name(true));
 
         return "https://febalist.github.io/viewer/?url=$url&name=$name";
