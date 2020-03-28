@@ -6,8 +6,7 @@
     }
   },
   "require": {
-    "illuminate/support": "^5.5",
-    "febalist/laravel-support": "^5.22|^6.3|^7.0|dev-master",
+    "febalist/laravel-support": "^5.22|^6.3|^7.0|^8.0",
     "maennchen/zipstream-php": "^0.5.2",
     "ralouphie/mimey": "^1.0",
     "spatie/image": "^1.5"
