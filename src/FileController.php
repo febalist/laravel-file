@@ -22,7 +22,9 @@ class FileController extends Controller
     {
         $file = $this->loadFile($disk, $path);
 
-        return $file->response(request('name'), [], false);
+        return $file->response(request('name'), [
+            'X-Frame-Options' => null,
+        ], false);
     }
 
     public function gallery($uuid)
