@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use ZipStream\Option\Archive;
 use ZipStream\ZipStream;
 
 class File extends StoragePath
@@ -156,7 +157,9 @@ class File extends StoragePath
         }
 
         $name = str_finish($name, '.zip');
-        $zip = new ZipStream($name);
+        $options = new Archive();
+        $options->setSendHttpHeaders(true);
+        $zip = new ZipStream($name, $options);
         $files->each(function (File $file) use ($zip) {
             $zip->addFileFromStream($file->name(true), $file->stream());
         });
