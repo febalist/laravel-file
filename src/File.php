@@ -536,11 +536,11 @@ class File extends StoragePath
     {
         $filename = $filename ?: $this->name(true);
         $disposition = $download ? ResponseHeaderBag::DISPOSITION_ATTACHMENT : ResponseHeaderBag::DISPOSITION_INLINE;
-        $headers = [
+        $headers = array_merge([
             'Content-Type' => $this->mime(),
             'Content-Length' => $this->size(),
             'Content-Disposition' => "$disposition; filename=\"$filename\"",
-        ];
+        ], $headers);
 
         $callback = function () {
             return $this->stream(true);
