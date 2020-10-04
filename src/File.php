@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class File
 {
     public const ROOT_DISK = 'root';
+    protected const TEMP_DIRECTORY = 'febalist-laravel-file';
 
     protected $path;
     protected $disk;
@@ -45,7 +46,7 @@ class File
 
         $name = $name ?? 'file.tmp';
         do {
-            $directory = sys_get_temp_dir().'/laravel-file-'.uniqid('', true);
+            $directory = sys_get_temp_dir().'/'.static::TEMP_DIRECTORY.'/'.uniqid('', true);
         } while ($storage->exists($directory));
         if (!$storage->makeDirectory($directory)) {
             throw new RuntimeException('Can not create temp directory');
