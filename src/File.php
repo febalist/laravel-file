@@ -2,6 +2,7 @@
 
 namespace Febalist\Laravel\File;
 
+use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
-use League\Flysystem\FileNotFoundException;
+use Illuminate\Support\Facades\URL;
 use RuntimeException;
 use SplFileInfo;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -243,6 +244,7 @@ class File
             'Content-Type' => $this->mime(),
             'Content-Length' => $this->size(),
             'Content-Disposition' => "$disposition; filename=\"$filename\"",
+            'X-Frame-Options' => null,
         ], $headers));
     }
 
@@ -268,6 +270,46 @@ class File
     public function read()
     {
         return $this->storage()->read($this->path);
+    }
+
+    /** @return string */
+    public function url($expiration = null)
+    {
+        try {
+            if ($expiration) {
+                $url = $this->storage()->temporaryUrl($this->path, $expiration);
+            } else {
+                $url = $this->storage()->url($this->path);
+            }
+        } catch (RuntimeException $exception) {
+            $url = null;
+        }
+
+        if (Tools::isUrl($url)) {
+            return $url;
+        }
+
+        return $this->streamUrl($expiration);
+    }
+
+    /** @return string */
+    public function streamUrl($expiration = null, $name = null)
+    {
+        return URL::signedRoute('file.stream', [
+            'disk' => $this->disk,
+            'path' => $this->path,
+            'name' => $name ?? $this->name(),
+        ], $expiration);
+    }
+
+    /** @return string */
+    public function downloadUrl($expiration = null, $name = null)
+    {
+        return URL::signedRoute('file.download', [
+            'disk' => $this->disk,
+            'path' => $this->path,
+            'name' => $name ?? $this->name(),
+        ], $expiration);
     }
 
     /** @return static */
