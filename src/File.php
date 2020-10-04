@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class File
 {
     public const ROOT_DISK = 'root';
+
     protected const TEMP_DIRECTORY = 'febalist-laravel-file';
 
     protected $path;
