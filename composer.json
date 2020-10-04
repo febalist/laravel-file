@@ -1,21 +1,27 @@
 {
-  "name": "febalist/laravel-file",
-  "autoload": {
-    "psr-4": {
-      "Febalist\\Laravel\\File\\": "src/"
+    "name": "febalist/laravel-file",
+    "require": {
+        "php": "^7.3",
+        "illuminate/support": "^8.0.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.2.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Febalist\\Laravel\\File\\FileServiceProvider"
+            ]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Febalist\\Laravel\\File\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
     }
-  },
-  "require": {
-    "febalist/laravel-support": "^5.22|^6.3|^7.0|^8.0",
-    "maennchen/zipstream-php": "^2.1",
-    "ralouphie/mimey": "^1.0",
-    "spatie/image": "^1.5"
-  },
-  "extra": {
-    "laravel": {
-      "providers": [
-        "Febalist\\Laravel\\File\\FileServiceProvider"
-      ]
-    }
-  }
 }

@@ -2,476 +2,162 @@
 
 namespace Febalist\Laravel\File;
 
-use Carbon\Carbon;
-use Febalist\Laravel\File\Exceptions\CannotSaveFileException;
-use File as FileHelper;
-use Illuminate\Http\File as IlluminateFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\InteractsWithTime;
-use Illuminate\Support\Str;
-use Mimey\MimeTypes;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Storage;
+use League\Flysystem\FileNotFoundException;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use SplFileInfo;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use ZipStream\Option\Archive;
-use ZipStream\ZipStream;
 
-class File extends StoragePath
+class File
 {
-    use InteractsWithTime;
+    public const ROOT_DISK = 'root';
 
-    const TEMP_DISK = 'local';
-    const TEMP_DIR = 'temp';
+    protected $path;
+    protected $disk;
 
-    const ICONS = [
-        '3g2',
-        '3gp',
-        'ai',
-        'air',
-        'asf',
-        'avi',
-        'bib',
-        'cls',
-        'csv',
-        'deb',
-        'djvu',
-        'dmg',
-        'doc',
-        'docx',
-        'dwf',
-        'dwg',
-        'eps',
-        'epub',
-        'exe',
-        'f',
-        'f77',
-        'f90',
-        'flac',
-        'flv',
-        'gif',
-        'gz',
-        'ico',
-        'indd',
-        'iso',
-        'jpg',
-        'jpeg',
-        'key',
-        'log',
-        'm4a',
-        'm4v',
-        'midi',
-        'mkv',
-        'mov',
-        'mp3',
-        'mp4',
-        'mpeg',
-        'mpg',
-        'msi',
-        'odp',
-        'ods',
-        'odt',
-        'oga',
-        'ogg',
-        'ogv',
-        'pdf',
-        'png',
-        'pps',
-        'ppsx',
-        'ppt',
-        'pptx',
-        'psd',
-        'pub',
-        'py',
-        'qt',
-        'ra',
-        'ram',
-        'rar',
-        'rm',
-        'rpm',
-        'rtf',
-        'rv',
-        'skp',
-        'spx',
-        'sql',
-        'sty',
-        'tar',
-        'tex',
-        'tgz',
-        'tiff',
-        'ttf',
-        'txt',
-        'vob',
-        'wav',
-        'wmv',
-        'xls',
-        'xlsx',
-        'xml',
-        'xpi',
-        'zip',
-    ];
-
-    protected $name;
-
-    public function __construct($path, $disk, $name = null)
+    public function __construct($path, $disk)
     {
-        $this->path = static::pathJoin($path);
-        $this->disk = static::diskName($disk);
-        $this->name = $name ?? basename($this->path);
+        $this->path = $path;
+        $this->disk = $disk;
     }
 
     /** @return static */
-    public static function temp($extension = null, $exists = true)
+    public static function create($contents, $path, $disk = null)
     {
-        $path = static::tempPath($extension);
-
-        if ($exists) {
-            return static::create(null, $path, static::TEMP_DISK);
-        } else {
-            return static::load($path, static::TEMP_DISK);
-        }
-    }
-
-    /** @return string */
-    public static function galleryUrl($files)
-    {
-        if (!$files instanceof Collection) {
-            $files = collect(array_wrap($files));
-        }
-
-        $uuid = (string) Str::uuid();
-        cache([
-            "febalist.file:gallery:$uuid" => $files->map(function (File $file) {
-                return [$file->path, $file->disk, $file->name(true)];
-            })->toArray(),
-        ], 1);
-
-        return route('file.gallery', $uuid);
-    }
-
-    public static function zip($files, $name = 'files.zip')
-    {
-        if (!$files instanceof Collection) {
-            $files = collect(array_wrap($files));
-        }
-
-        $name = str_finish($name, '.zip');
-        $options = new Archive();
-        $options->setSendHttpHeaders(true);
-        $zip = new ZipStream($name, $options);
-        $files->each(function (File $file) use ($zip) {
-            $zip->addFileFromStream($file->name(true), $file->stream());
-        });
-        $zip->finish();
-    }
-
-    public static function zipUrl($files, $name = 'files.zip')
-    {
-        if (!$files instanceof Collection) {
-            $files = collect(array_wrap($files));
-        }
-
-        $uuid = (string) Str::uuid();
-        cache([
-            "febalist.file:zip:$uuid" => $files->map(function (File $file) {
-                return [$file->path, $file->disk, $file->name(true)];
-            })->toArray(),
-        ], 5);
-
-        return route('file.zip', [$uuid, $name]);
-    }
-
-    /** @return static */
-    public static function create($contents, $path, $disk = 'default')
-    {
-        $file = new static($path, $disk);
+        $file = new static($path, $disk ?? Config::get('filesystems.default'));
         $file->write($contents);
 
         return $file;
     }
 
     /** @return static */
-    public static function createTemp($contents, $extension = null)
+    public static function temp($contents = null, $name = null)
     {
-        $path = static::tempPath($extension);
+        $storage = Storage::disk(static::ROOT_DISK);
 
-        return static::create($contents, $path, static::TEMP_DISK);
-    }
-
-    /** @return static */
-    public static function put($source, $path, $disk = 'default', $delete = false)
-    {
-        if (is_string($source)) {
-            if (starts_with($source, ['http://', 'https://'])) {
-                $source = static::resource($source);
-            } else {
-                $source = new IlluminateFile($source);
-            }
+        $name = $name ?? 'file.tmp';
+        do {
+            $directory = sys_get_temp_dir().'/laravel-file-'.uniqid('', true);
+        } while ($storage->exists($directory));
+        if (!$storage->makeDirectory($directory)) {
+            throw new RuntimeException('Can not create temp directory');
         }
 
-        $file = static::create($source, $path, $disk);
+        $file = new static("$directory/$name", static::ROOT_DISK);
 
-        if ($delete && $source instanceof SymfonyFile) {
-            FileHelper::delete($source);
+        if ($contents !== null) {
+            $file->write($contents);
         }
 
         return $file;
     }
 
     /** @return static */
-    public static function putTemp($source, $delete = false)
+    public static function load($source)
     {
-        $path = static::tempPath(static::pathExtension(static::fileName($source)));
-
-        return static::put($source, $path, static::TEMP_DISK, $delete);
-    }
-
-    public static function pathJoin(...$path)
-    {
-        $path = array_flatten($path);
-
-        $paths = [];
-
-        foreach ($path as $arg) {
-            if ($arg !== '') {
-                $paths[] = $arg;
-            }
+        if ($source instanceof self) {
+            return new static($source->path, $source->disk);
         }
 
-        $path = preg_replace('#/+#', '/', join('/', $paths));
-
-        foreach (['./', '/'] as $string) {
-            if (starts_with($path, $string)) {
-                $path = str_replace_first($string, '', $path);
-            }
+        if (Tools::isUrl($source)) {
+            $source = Tools::resource($source);
+        } elseif ($source instanceof SplFileInfo) {
+            $source = $source->getPathname();
         }
 
-        return $path;
-    }
-
-    public static function pathDirectory($path)
-    {
-        $dir = pathinfo($path, PATHINFO_DIRNAME);
-
-        return $dir == '.' ? '' : $dir;
-    }
-
-    public static function fileName($file, $slug = false)
-    {
-        if (is_string($file) && starts_with($file, ['http://', 'https://'])) {
-            $file = static::resource($file);
+        if (is_resource($source)) {
+            return static::temp($source, Tools::name($source));
+        } elseif (!is_string($source)) {
+            throw new RuntimeException('Invalid source');
         }
 
-        $name = null;
-
-        if ($file instanceof File) {
-            $name = $file->name(true);
-        } elseif (is_resource($file)) {
-            $meta = stream_get_meta_data($file);
-            if ($meta['wrapper_data'] ?? null) {
-                $headers = [];
-                foreach ($meta['wrapper_data'] as $data) {
-                    $headers[str_before($data, ':')] = str_after($data, ':');
-                }
-
-                if ($disposition = ($headers['Content-Disposition'] ?? null)) {
-                    $name = str_between($disposition, 'filename="', '"');
-                } elseif ($mime = ($headers['Content-Type'] ?? null)) {
-                    $extension = static::mimeExtension($mime);
-                    if ($extension) {
-                        $name = static::pathFilename($meta['uri'] ?? 'file').'.'.$extension;
-                    }
-                }
-            }
-            $name = $name ?: basename(stream_get_meta_data($file)['uri'] ?? '') ?: '_';
-        } elseif (is_string($file)) {
-            $name = basename($file);
-        } elseif ($file instanceof UploadedFile) {
-            $name = $file->getClientOriginalName() ?: $file->getFilename();
-        } elseif ($file instanceof SymfonyFile) {
-            $name = $file->getFilename();
-        } else {
-            throw new RuntimeException('Invalid file');
-        }
-
-        $name = str_before($name, '?');
-
-        return $slug ? static::slugName($name) : $name;
-    }
-
-    public static function fileMime($file)
-    {
-        if ($file instanceof UploadedFile) {
-            return $file->getClientMimeType() ?: $file->getMimeType();
-        } elseif ($file instanceof SymfonyFile) {
-            return $file->getMimeType();
-        }
-
-        $name = static::fileName($file);
-        $extension = static::pathExtension($name);
-
-        return static::extensionMime($extension);
-    }
-
-    public static function pathFilename($path)
-    {
-        return pathinfo($path, PATHINFO_FILENAME);
-    }
-
-    public static function pathExtension($path)
-    {
-        return strtolower(pathinfo($path, PATHINFO_EXTENSION));
-    }
-
-    public static function slugName($filename)
-    {
-        $name = str_slug(static::pathFilename($filename), '_') ?: '_';
-        $extension = strtolower(static::pathExtension($filename));
-
-        return $name.($extension ? ".$extension" : '');
-    }
-
-    public static function tempName($extension = null)
-    {
-        $uuid = (string) Str::orderedUuid();
-        $extension = $extension ?: 'tmp';
-
-        return "$uuid.$extension";
-    }
-
-    public static function tempDirectory($absolute = false)
-    {
-        $name = static::TEMP_DIR;
-        $path = storage_path("app/$name");
-        if (!FileHelper::exists($path)) {
-            FileHelper::makeDirectory($path);
-        }
-
-        return $absolute ? $path : $name;
-    }
-
-    public static function tempPath($extension = null, $absolute = false)
-    {
-        $directory = static::tempDirectory($absolute);
-        $name = static::tempName($extension);
-        $path = static::pathJoin($directory, $name);
-
-        return $absolute ? str_start($path, '/') : $path;
-    }
-
-    public static function diskName($name)
-    {
-        if (in_array($name, ['default', 'cloud'])) {
-            return config("filesystems.$name");
-        }
-
-        return $name;
-    }
-
-    public static function extensionMime($extension)
-    {
-        return static::mimey()->getMimeType($extension);
-    }
-
-    public static function mimeExtension($mime)
-    {
-        return static::mimey()->getExtension($mime);
-    }
-
-    /** @return resource */
-    public static function resource($url)
-    {
-        return fopen($url, 'rb', false, stream_context_create([
-            'ssl' => [
-                'verify_peer' => false,
-            ],
-        ]));
-    }
-
-    protected static function mimey()
-    {
-        return new MimeTypes();
-    }
-
-    /** @return static|null */
-    public function neighbor($path, $check = false)
-    {
-        return static::load([$this->directory(), $path], $this->disk, $check);
+        return new static($source, static::ROOT_DISK);
     }
 
     /** @return static */
-    public function move($path, $disk = null)
+    public static function put($source, $path, $disk = null)
     {
-        if (func_num_args() == 1 && $path instanceof File) {
-            $target = $path;
-        } else {
-            $target = static::load($path, $disk ?? $this->disk);
-        }
+        $file = static::load($source);
 
-        if ($target->disk == $this->disk && $target->path == $this->path) {
-            return $this;
-        }
-
-        if ($target->exists()) {
-            $target->delete();
-        }
-
-        if ($target->disk == $this->disk) {
-            $target->dir()->create();
-
-            $this->storage()->move($this->path, $target->path);
-
-            $target->checkExists();
-        } else {
-            $this->copy($target);
-            $this->delete();
-        }
-
-        $this->path = $target->path;
-        $this->disk = $target->disk;
-
-        return $this;
+        return $file->copy($path, $disk ?? Config::get('filesystems.default'));
     }
 
-    /** @return static */
-    public function copy($path, $disk = null)
+    /** @return Collection|static[] */
+    public static function request($key = null)
     {
-        if (func_num_args() == 1 && $path instanceof File) {
-            $target = $path;
-        } else {
-            $target = static::load($path, $disk ?? $this->disk);
+        $files = [];
+
+        foreach (Arr::wrap(Request::file($key)) as $file) {
+            $files[$file->getClientOriginalName()] = static::load($file);
         }
 
-        if ($target->disk == $this->disk && $target->path == $this->path) {
-            return $this;
-        }
-
-        if ($target->exists()) {
-            $target->delete();
-        }
-
-        if ($target->disk == $this->disk) {
-            $target->dir()->create();
-
-            $this->storage()->copy($this->path, $target->path);
-
-            $target->checkExists();
-        } else {
-            $target->write($this);
-        }
-
-        return $target;
+        return collect($files);
     }
 
-    /** @return static */
-    public function copyTemp()
+    /** @return string */
+    public function disk()
     {
-        $temp = static::temp($this->extension(), false);
-
-        return $this->copy($temp);
+        return $this->disk;
     }
 
+    /** @return string */
+    public function path()
+    {
+        return $this->path;
+    }
+
+    /** @return string */
+    public function directory()
+    {
+        $dir = pathinfo($this->path, PATHINFO_DIRNAME);
+
+        return $dir === '.' ? '' : $dir;
+    }
+
+    /** @return string */
+    public function name()
+    {
+        return basename($this->path);
+    }
+
+    /** @return string */
+    public function extension()
+    {
+        return pathinfo($this->path, PATHINFO_EXTENSION);
+    }
+
+    /** @return \Illuminate\Filesystem\FilesystemAdapter */
+    public function storage()
+    {
+        return Storage::disk($this->disk);
+    }
+
+    /** @return boolean */
+    public function exists()
+    {
+        return $this->storage()->exists($this->path);
+    }
+
+    /** @return int */
+    public function timestamp()
+    {
+        return $this->storage()->getTimestamp($this->path);
+    }
+
+    /** @return \Illuminate\Support\Carbon */
+    public function time()
+    {
+        return Date::createFromTimestamp($this->timestamp());
+    }
+
+    /** @return $this */
     public function delete()
     {
         $this->storage()->delete($this->path);
@@ -480,237 +166,161 @@ class File extends StoragePath
     }
 
     /** @return static */
+    public function copy($path = null, $disk = null)
+    {
+        return $this->transfer($path, $disk, false);
+    }
+
+    /** @return $this */
+    public function move($path = null, $disk = null)
+    {
+        return $this->transfer($path, $disk, true);
+    }
+
+    /** @return $this */
     public function rename($name)
     {
-        return $this->move([$this->directory(), $name]);
+        return $this->move($this->directory().'/'.$name);
     }
 
-    /** @return string|bool */
-    public function local()
+    /** @return $this */
+    public function store($path = null)
     {
-        if (config("filesystems.disks.$this->disk.driver") != 'local') {
-            return false;
+        return $this->move($path, Config::get('filesystems.default'));
+    }
+
+    /** @return $this */
+    public function upload($path = null)
+    {
+        return $this->move($path, Config::get('filesystems.cloud'));
+    }
+
+    /** @return $this */
+    public function write($contents)
+    {
+        if ($contents instanceof self) {
+            $contents = $contents->stream();
+        } elseif ($contents instanceof SplFileInfo) {
+            $contents = fopen($contents, 'rb');
         }
 
-        return $this->storage()->path($this->path);
-    }
+        $this->mkdir();
 
-    /** @return string */
-    public function directory()
-    {
-        return static::pathDirectory($this->path);
-    }
+        if (is_resource($contents)) {
+            $this->storage()->putStream($this->path, $contents);
+        } else {
+            $this->storage()->put($this->path, $contents);
+        }
 
-    /** @return string */
-    public function name($original = false)
-    {
-        return $original ? $this->name : basename($this->path);
-    }
+        if (!$this->exists()) {
+            throw new FileNotFoundException("$this->disk:$this->path");
+        }
 
-    /** @return string */
-    public function extension()
-    {
-        return static::pathExtension($this->name(true));
-    }
-
-    /** @return integer */
-    public function size()
-    {
-        return $this->storage()->size($this->path);
+        return $this;
     }
 
     /** @return resource */
-    public function stream($send = false)
+    public function stream()
     {
-        $resource = $this->storage()->readStream($this->path);
+        return $this->storage()->readStream($this->path);
+    }
 
-        if ($send) {
-            fpassthru($resource);
-        }
-
-        return $resource;
+    /** @return void */
+    public function send()
+    {
+        fpassthru($this->stream());
     }
 
     /** @return StreamedResponse */
     public function response($filename = null, $headers = [], $download = false)
     {
-        $filename = $filename ?: $this->name(true);
+        $filename = $filename ?: $this->name();
         $disposition = $download ? ResponseHeaderBag::DISPOSITION_ATTACHMENT : ResponseHeaderBag::DISPOSITION_INLINE;
-        $headers = array_merge([
+
+        return Response::stream(function () {
+            $this->send();
+        }, 200, array_merge([
             'Content-Type' => $this->mime(),
             'Content-Length' => $this->size(),
             'Content-Disposition' => "$disposition; filename=\"$filename\"",
-        ], $headers);
-
-        $callback = function () {
-            return $this->stream(true);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        ], $headers));
     }
 
-    /** @return string|false */
+    /** @return StreamedResponse */
+    public function download($filename = null, $headers = [])
+    {
+        return $this->response($filename, $headers, true);
+    }
+
+    /** @return int */
+    public function size()
+    {
+        return $this->storage()->size($this->path);
+    }
+
+    /** @return string */
     public function mime()
     {
-        return static::extensionMime($this->extension());
+        return $this->storage()->mimeType($this->path);
     }
 
     /** @return string */
-    public function type()
-    {
-        return str_before($this->mime(), '/');
-    }
-
-    /** @return boolean */
-    public function convertible()
-    {
-        return $this->type() == 'image' && in_array($this->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-    }
-
-    /** @return string */
-    public function url($expiration = null)
-    {
-        if ($expiration) {
-            $expiration = $this->availableAt($expiration);
-            $expiration = Carbon::createFromTimestamp($expiration);
-        }
-
-        try {
-            if ($expiration) {
-                $url = $this->storage()->temporaryUrl($this->path, $expiration);
-            } else {
-                $url = $this->storage()->url($this->path);
-            }
-        } catch (RuntimeException $exception) {
-            $url = null;
-        }
-
-        if ($url && starts_with($url, ['http://', 'https://'])) {
-            return $url;
-        }
-
-        return $this->streamUrl($expiration);
-    }
-
-    public function streamUrl($expiration = null, $name = null)
-    {
-        return route_signed('file.stream', [
-            'disk' => $this->disk,
-            'path' => $this->path,
-            'name' => $name ?: $this->name(true),
-        ], $expiration);
-    }
-
-    public function downloadUrl($expiration = null, $name = null)
-    {
-        return route_signed('file.download', [
-            'disk' => $this->disk,
-            'path' => $this->path,
-            'name' => $name ?: $this->name(true),
-        ], $expiration);
-    }
-
-    /** @return string */
-    public function viewUrl($expiration = null, $name = null)
-    {
-        $url = urlencode($this->streamUrl($expiration));
-        $name = urlencode($name ?: $this->name(true));
-
-        return "https://febalist.github.io/viewer/?url=$url&name=$name";
-    }
-
-    public function iconUrl($size = 128)
-    {
-        $extension = $this->extension();
-        if (in_array($extension, static::ICONS)) {
-            return "https://raw.githubusercontent.com/eagerterrier/MimeTypes-Link-Icons/master/images/$extension-icon-{$size}x{$size}.png";
-        }
-
-        return "https://img.icons8.com/material/$size/888888/file.png";
-    }
-
-    /** @return Image|null */
-    public function image()
-    {
-        if ($this->convertible()) {
-            return new Image($this);
-        }
-
-        return null;
-    }
-
-    /** @return string */
-    public function sha1()
-    {
-        return sha1_file($this->local() ?: $this->url()) ?: null;
-    }
-
     public function read()
     {
         return $this->storage()->read($this->path);
     }
 
-    public function write($contents)
+    /** @return static */
+    protected function transfer($path, $disk, $delete)
     {
-        if (is_callable($contents)) {
-            $temp = static::temp(null, false);
-            $contents($temp->local());
-            $temp->move($this);
+        if (func_num_args() === 1 && $path instanceof self) {
+            $target = $path;
+        } else {
+            $target = new static($path ?? $this->path, $disk ?? $this->disk);
+        }
+
+        if ($target->disk === $this->disk && $target->path === $this->path) {
+            return $this;
+        }
+
+        if ($target->exists()) {
+            $target->delete();
+        }
+
+        if ($target->disk === $this->disk) {
+            $target->mkdir();
+
+            if ($delete) {
+                $this->storage()->move($this->path, $target->path);
+            } else {
+                $this->storage()->copy($this->path, $target->path);
+            }
+
+            if (!$this->exists()) {
+                throw new FileNotFoundException("$target->disk:$target->path");
+            }
+        } else {
+            $target->write($this);
+
+            if ($delete) {
+                $this->delete();
+            }
+        }
+
+        if ($delete) {
+            $this->path = $target->path;
+            $this->disk = $target->disk;
 
             return $this;
         } else {
-            if ($contents instanceof File) {
-                $contents = $contents->stream();
-            } elseif ($contents instanceof SymfonyFile) {
-                $contents = fopen($contents, 'r');
-            }
-
-            $this->dir()->create();
-
-            if (is_resource($contents)) {
-                $this->storage()->putStream($this->path, $contents);
-            } else {
-                $this->storage()->put($this->path, $contents);
-            }
-
-            $this->checkExists();
+            return $target;
         }
-
-        return $this;
     }
 
-    public function fetch(callable $callback, $update = false)
+    protected function mkdir()
     {
-        $copy = $this->copyTemp();
-
-        $result = $callback($copy->local());
-
-        if ($update) {
-            $copy->move($this);
+        if ($dir = $this->directory()) {
+            $this->storage()->createDir($dir);
         }
-
-        if ($copy->exists()) {
-            $copy->delete();
-        }
-
-        return $result;
-    }
-
-    public function transform(callable $callback)
-    {
-        $this->fetch($callback, true);
-
-        return $this;
-    }
-
-    protected function checkExists()
-    {
-        throw_unless($this->exists(), CannotSaveFileException::class);
-    }
-
-    /** @deprecated */
-    protected function dir($check = false)
-    {
-        return Directory::load(static::pathDirectory($this->path), $this->disk, $check);
     }
 }
