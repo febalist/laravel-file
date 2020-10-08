@@ -38,7 +38,6 @@ abstract class IntegrationTest extends BaseTestCase
     protected function testFile(File $file, $path = null, $contents = null, $disk = null)
     {
         $this->assertTrue($file->exists());
-        $this->assertLessThanOrEqual(5, $file->time()->diffInMinutes());
 
         if ($contents) {
             $this->assertEquals($contents, $file->read());

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Febalist\Laravel\File\File;
+use Illuminate\Support\Facades\Config;
 use Tests\IntegrationTest;
 
 class UploadTest extends IntegrationTest
@@ -15,11 +16,10 @@ class UploadTest extends IntegrationTest
 
         $file->upload();
 
-        $this->testFile($file, $path, $contents, 'public');
-    }
+        $this->testFile($file, $path, $contents, Config::get('filesystems.cloud'));
 
-    protected function getEnvironmentSetUp($app)
-    {
-        $app['config']->set('filesystems.cloud', 'public');
+        $file->delete();
+
+        $this->assertFalse($file->exists());
     }
 }
