@@ -4,6 +4,7 @@ namespace Febalist\Laravel\File\Http\Controllers;
 
 use Febalist\Laravel\File\File;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Routing\Controller;
 use Illuminate\Routing\Middleware\ValidateSignature;
 
 class StreamController extends Controller

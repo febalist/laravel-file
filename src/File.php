@@ -4,6 +4,7 @@ namespace Febalist\Laravel\File;
 
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Request;
@@ -18,8 +19,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class File
 {
     public const ROOT_DISK = 'root';
-
-    protected const TEMP_DIRECTORY = 'laravel';
 
     protected $path;
     protected $disk;
@@ -42,15 +41,8 @@ class File
     /** @return static */
     public static function temp($contents = null, $name = null)
     {
-        $storage = Storage::disk(static::ROOT_DISK);
-
         $name = $name ?? 'file.tmp';
-        do {
-            $directory = sys_get_temp_dir().'/'.static::TEMP_DIRECTORY.'/'.uniqid('', true);
-        } while ($storage->exists($directory));
-        if (!$storage->makeDirectory($directory)) {
-            throw new RuntimeException('Cannot create temp directory');
-        }
+        $directory = Tools::makeTempDirectory();
 
         $file = new static("$directory/$name", static::ROOT_DISK);
 
@@ -96,8 +88,23 @@ class File
     {
         $files = [];
 
-        foreach (Arr::wrap(Request::file($key)) as $file) {
+        foreach (Arr::flatten(Arr::wrap(Request::file($key))) as $file) {
             $files[$file->getClientOriginalName()] = static::load($file);
+        }
+
+        return $files;
+    }
+
+    /** @return Collection|static[] */
+    public static function receive($key = null)
+    {
+        $files = new Collection();
+
+        $directory = Tools::makeTempDirectory();
+
+        foreach (static::request($key) as $name => $file) {
+            $file->move("$directory/$name");
+            $files->push($file);
         }
 
         return $files;

@@ -2,6 +2,7 @@
 
 namespace Febalist\Laravel\File;
 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 use SplFileInfo;
@@ -66,5 +67,20 @@ class Tools
     public static function isUrl($string)
     {
         return is_string($string) && Str::startsWith($string, ['http://', 'https://']);
+    }
+
+    public static function makeTempDirectory()
+    {
+        $storage = Storage::disk(File::ROOT_DISK);
+
+        do {
+            $directory = sys_get_temp_dir().'/laravel/'.uniqid('', true);
+        } while ($storage->exists($directory));
+
+        if (!$storage->makeDirectory($directory)) {
+            throw new RuntimeException('Cannot create temp directory');
+        }
+
+        return $directory;
     }
 }

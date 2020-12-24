@@ -10,24 +10,6 @@ class FileServiceProvider extends IlluminateServiceProvider
 {
     public function register()
     {
-        $this->configure();
-    }
-
-    public function boot()
-    {
-        $this->registerRoutes();
-    }
-
-    protected function configure()
-    {
-        Config::set('filesystems.disks.'.File::ROOT_DISK, [
-            'driver' => 'local',
-            'root' => '/',
-        ]);
-    }
-
-    protected function registerRoutes()
-    {
         Route::group([
             'prefix' => 'file',
             'namespace' => 'Febalist\Laravel\File\Http\Controllers',
@@ -35,5 +17,13 @@ class FileServiceProvider extends IlluminateServiceProvider
         ], function () {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         });
+    }
+
+    public function boot()
+    {
+        Config::set('filesystems.disks.'.File::ROOT_DISK, [
+            'driver' => 'local',
+            'root' => '/',
+        ]);
     }
 }
