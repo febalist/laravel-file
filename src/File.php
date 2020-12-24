@@ -351,7 +351,7 @@ class File
                 $this->storage()->copy($this->path, $target->path);
             }
 
-            if (!$this->exists()) {
+            if (!$target->exists()) {
                 throw new FileNotFoundException("$target->disk:$target->path");
             }
         } else {
