@@ -2,9 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('stream/{disk}/{path}', 'StreamController@stream')
+Route::get('view/{disk}/{path}', 'StreamController@view')
     ->where('path', '(.*)')
-    ->name('file.stream');
+    ->name('file.view');
 
 Route::get('download/{disk}/{path}', 'StreamController@download')
     ->where('path', '(.*)')

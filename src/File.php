@@ -4,7 +4,6 @@ namespace Febalist\Laravel\File;
 
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Request;
@@ -20,7 +19,7 @@ class File
 {
     public const ROOT_DISK = 'root';
 
-    protected const TEMP_DIRECTORY = 'febalist-laravel-file';
+    protected const TEMP_DIRECTORY = 'laravel';
 
     protected $path;
     protected $disk;
@@ -50,7 +49,7 @@ class File
             $directory = sys_get_temp_dir().'/'.static::TEMP_DIRECTORY.'/'.uniqid('', true);
         } while ($storage->exists($directory));
         if (!$storage->makeDirectory($directory)) {
-            throw new RuntimeException('Can not create temp directory');
+            throw new RuntimeException('Cannot create temp directory');
         }
 
         $file = new static("$directory/$name", static::ROOT_DISK);
@@ -92,7 +91,7 @@ class File
         return $file->copy($path, $disk ?? Config::get('filesystems.default'));
     }
 
-    /** @return Collection|static[] */
+    /** @return static[] */
     public static function request($key = null)
     {
         $files = [];
@@ -101,7 +100,7 @@ class File
             $files[$file->getClientOriginalName()] = static::load($file);
         }
 
-        return collect($files);
+        return $files;
     }
 
     /** @return string */
@@ -136,6 +135,12 @@ class File
         return pathinfo($this->path, PATHINFO_EXTENSION);
     }
 
+    /** @return string */
+    public function filename()
+    {
+        return basename($this->path, '.'.$this->extension());
+    }
+
     /** @return \Illuminate\Filesystem\FilesystemAdapter */
     public function storage()
     {
@@ -146,6 +151,18 @@ class File
     public function exists()
     {
         return $this->storage()->exists($this->path);
+    }
+
+    /** @return int */
+    public function size()
+    {
+        return $this->storage()->size($this->path);
+    }
+
+    /** @return string */
+    public function mime()
+    {
+        return $this->storage()->mimeType($this->path);
     }
 
     /** @return int */
@@ -251,21 +268,15 @@ class File
     }
 
     /** @return StreamedResponse */
+    public function view($filename = null, $headers = [])
+    {
+        return $this->response($filename, $headers, false);
+    }
+
+    /** @return StreamedResponse */
     public function download($filename = null, $headers = [])
     {
         return $this->response($filename, $headers, true);
-    }
-
-    /** @return int */
-    public function size()
-    {
-        return $this->storage()->size($this->path);
-    }
-
-    /** @return string */
-    public function mime()
-    {
-        return $this->storage()->mimeType($this->path);
     }
 
     /** @return string */
@@ -291,13 +302,13 @@ class File
             return $url;
         }
 
-        return $this->streamUrl($expiration);
+        return $this->viewUrl($expiration);
     }
 
     /** @return string */
-    public function streamUrl($expiration = null, $name = null)
+    public function viewUrl($expiration = null, $name = null)
     {
-        return URL::signedRoute('file.stream', [
+        return URL::signedRoute('file.view', [
             'disk' => $this->disk,
             'path' => $this->path,
             'name' => $name ?? $this->name(),

@@ -13,14 +13,14 @@ class StreamController extends Controller
         $this->middleware(ValidateSignature::class)->only('download', 'stream');
     }
 
-    public function stream($disk, $path)
+    public function view($disk, $path)
     {
         $file = new File($path, $disk);
 
         try {
-            return $file->response(request('name'));
+            return $file->view(request('name'));
         } catch (FileNotFoundException $exception) {
-            return abort(404);
+            abort(404);
         }
     }
 
@@ -31,7 +31,7 @@ class StreamController extends Controller
         try {
             return $file->download(request('name'));
         } catch (FileNotFoundException $exception) {
-            return abort(404);
+            abort(404);
         }
     }
 }

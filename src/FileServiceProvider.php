@@ -8,14 +8,14 @@ use Illuminate\Support\ServiceProvider as IlluminateServiceProvider;
 
 class FileServiceProvider extends IlluminateServiceProvider
 {
-    public function boot()
-    {
-        $this->registerRoutes();
-    }
-
     public function register()
     {
         $this->configure();
+    }
+
+    public function boot()
+    {
+        $this->registerRoutes();
     }
 
     protected function configure()

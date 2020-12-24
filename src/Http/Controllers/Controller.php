@@ -4,7 +4,7 @@ namespace Febalist\Laravel\File\Http\Controllers;
 
 use Illuminate\Routing\Controller as BaseController;
 
-class Controller extends BaseController
+class ontroller extends BaseController
 {
 
 }
