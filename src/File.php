@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use RuntimeException;
 use SplFileInfo;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -25,7 +26,7 @@ class File
 
     public function __construct($path, $disk)
     {
-        $this->path = $path;
+        $this->path = Str::start($path, '/');
         $this->disk = $disk;
     }
 
@@ -317,7 +318,7 @@ class File
     {
         return URL::signedRoute('file.view', [
             'disk' => $this->disk,
-            'path' => $this->path,
+            'path' => substr($this->path, 1),
             'name' => $name ?? $this->name(),
         ], $expiration);
     }
@@ -327,7 +328,7 @@ class File
     {
         return URL::signedRoute('file.download', [
             'disk' => $this->disk,
-            'path' => $this->path,
+            'path' => substr($this->path, 1),
             'name' => $name ?? $this->name(),
         ], $expiration);
     }

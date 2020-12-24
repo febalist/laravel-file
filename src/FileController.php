@@ -1,13 +1,12 @@
 <?php
 
-namespace Febalist\Laravel\File\Http\Controllers;
+namespace Febalist\Laravel\File;
 
-use Febalist\Laravel\File\File;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Routing\Controller;
 use Illuminate\Routing\Middleware\ValidateSignature;
 
-class StreamController extends Controller
+class FileController extends Controller
 {
     public function __construct()
     {

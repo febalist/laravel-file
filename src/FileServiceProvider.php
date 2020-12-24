@@ -12,7 +12,6 @@ class FileServiceProvider extends IlluminateServiceProvider
     {
         Route::group([
             'prefix' => 'file',
-            'namespace' => 'Febalist\Laravel\File\Http\Controllers',
             'middleware' => 'web',
         ], function () {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
