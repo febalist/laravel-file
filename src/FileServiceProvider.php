@@ -16,6 +16,7 @@ class FileServiceProvider extends IlluminateServiceProvider
         ], function () {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         });
+        $this->loadViewsFrom(__DIR__.'/../views', 'file');
     }
 
     public function boot()

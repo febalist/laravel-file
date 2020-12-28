@@ -5,8 +5,9 @@
         "illuminate/support": "^8.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^6.2.0",
-        "league/flysystem-aws-s3-v3": "^1.0"
+        "league/flysystem-aws-s3-v3": "^1.0",
+        "maennchen/zipstream-php": "^2.1",
+        "orchestra/testbench": "^6.2"
     },
     "extra": {
         "laravel": {

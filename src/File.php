@@ -4,13 +4,13 @@ namespace Febalist\Laravel\File;
 
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use RuntimeException;
 use SplFileInfo;
@@ -90,16 +90,20 @@ class File
         $files = [];
 
         foreach (Arr::flatten(Arr::wrap(Request::file($key))) as $file) {
-            $files[$file->getClientOriginalName()] = static::load($file);
+            $name = $file->getClientOriginalName();
+            if (Str::contains($name, ['/', '\\', '?', '%', '*', ':', '|', '"', '<', '>'])) {
+                throw new RuntimeException('Invalid filename');
+            }
+            $files[$name] = static::load($file);
         }
 
         return $files;
     }
 
-    /** @return Collection|static[] */
+    /** @return FileCollection|static[] */
     public static function receive($key = null)
     {
-        $files = new Collection();
+        $files = static::collect();
 
         $directory = Tools::makeTempDirectory();
 
@@ -109,6 +113,12 @@ class File
         }
 
         return $files;
+    }
+
+    /** @return FileCollection|static[] */
+    public static function collect($files = [])
+    {
+        return new FileCollection($files);
     }
 
     /** @return string */
@@ -171,6 +181,26 @@ class File
     public function mime()
     {
         return $this->storage()->mimeType($this->path);
+    }
+
+    /** @return string */
+    public function type()
+    {
+        return Str::before($this->mime(), '/');
+    }
+
+    /** @return string */
+    public function iconUrl()
+    {
+        return Tools::mimeIconUrl($this->mime());
+    }
+
+    /** @return HtmlString */
+    public function icon($class = 'fas')
+    {
+        $icon = Tools::mimeIcon($this->mime());
+
+        return new HtmlString("<i class='$class fa-$icon'></i>");
     }
 
     /** @return int */
@@ -276,7 +306,7 @@ class File
     }
 
     /** @return StreamedResponse */
-    public function view($filename = null, $headers = [])
+    public function proxy($filename = null, $headers = [])
     {
         return $this->response($filename, $headers, false);
     }
