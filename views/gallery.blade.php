@@ -11,7 +11,7 @@
             <a href="{{ $file->url() }}"></a>
         @else
             <div data-thumb="{{ $file->iconUrl() }}" data-thumbratio="33/44">
-                <iframe src="{{ $file->viewUrl() }}"></iframe>
+                <iframe src="{{ $file->viewerUrl() }}"></iframe>
             </div>
         @endif
     @endforeach

@@ -290,31 +290,35 @@ class File
     }
 
     /** @return StreamedResponse */
-    public function response($filename = null, $headers = [], $download = false)
+    public function response($headers = [])
     {
-        $filename = $filename ?: $this->name();
-        $disposition = $download ? ResponseHeaderBag::DISPOSITION_ATTACHMENT : ResponseHeaderBag::DISPOSITION_INLINE;
-
         return Response::stream(function () {
             $this->send();
         }, 200, array_merge([
             'Content-Type' => $this->mime(),
             'Content-Length' => $this->size(),
-            'Content-Disposition' => "$disposition; filename=\"$filename\"",
             'X-Frame-Options' => null,
         ], $headers));
     }
 
     /** @return StreamedResponse */
-    public function proxy($filename = null, $headers = [])
+    public function view($filename = null, $headers = [])
     {
-        return $this->response($filename, $headers, false);
+        $filename = $filename ?: $this->name();
+        $disposition = ResponseHeaderBag::DISPOSITION_INLINE;
+        $headers['Content-Disposition'] = "$disposition; filename=\"$filename\"";
+
+        return $this->response($headers);
     }
 
     /** @return StreamedResponse */
     public function download($filename = null, $headers = [])
     {
-        return $this->response($filename, $headers, true);
+        $filename = $filename ?: $this->name();
+        $disposition = ResponseHeaderBag::DISPOSITION_ATTACHMENT;
+        $headers['Content-Disposition'] = "$disposition; filename=\"$filename\"";
+
+        return $this->response($headers);
     }
 
     /** @return string */
@@ -361,6 +365,15 @@ class File
             'path' => substr($this->path, 1),
             'name' => $name ?? $this->name(),
         ], $expiration);
+    }
+
+    /** @return string */
+    public function viewerUrl($expiration = null, $name = null)
+    {
+        $url = urlencode($this->url($expiration));
+        $name = urlencode($name ?: $this->name());
+
+        return "https://febalist.github.io/viewer/?url=$url&name=$name";
     }
 
     /** @return static */
