@@ -106,11 +106,13 @@ class Tools
         return $directory;
     }
 
-    public static function mimeIconUrl($mime)
+    public static function mimeIconUrl($mime, $solid = false)
     {
         $name = static::mimeIcon($mime);
 
-        return "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/svgs/solid/$name.svg";
+        $type = $solid ? 'solid' : 'regular';
+
+        return "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/svgs/$type/$name.svg";
     }
 
     public static function mimeIcon($mime)

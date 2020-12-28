@@ -190,9 +190,9 @@ class File
     }
 
     /** @return string */
-    public function iconUrl()
+    public function iconUrl($solid = false)
     {
-        return Tools::mimeIconUrl($this->mime());
+        return Tools::mimeIconUrl($this->mime(), $solid);
     }
 
     /** @return HtmlString */
