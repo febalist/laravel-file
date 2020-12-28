@@ -1,7 +1,7 @@
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fotorama/4.6.4/fotorama.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fotorama@4.6/fotorama.css">
 
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/fotorama/4.6.4/fotorama.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/jquery@3.5/dist/jquery.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/fotorama@4.6/fotorama.js"></script>
 
 <div class="fotorama" {!! count($files) > 1 ? 'data-nav="thumbs"' : '' !!} data-width="100%" data-height="100%"
      data-ratio="16/9" data-allowfullscreen="native" data-thumbfit="cover" data-keyboard="true">
