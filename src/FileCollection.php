@@ -50,10 +50,11 @@ class FileCollection extends Collection
         $zip->finish();
     }
 
-    public function gallery(): View
+    public function gallery($expiration = null): View
     {
         return view('file::gallery', [
             'files' => $this->items,
+            'expiration' => $expiration,
         ]);
     }
 }

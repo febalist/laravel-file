@@ -8,10 +8,10 @@
     @foreach($files as $file)
         @php /** @var \Febalist\Laravel\File\File $file */ @endphp
         @if($file->type() === 'image')
-            <a href="{{ $file->url() }}"></a>
+            <a href="{{ $file->url($expiration) }}"></a>
         @else
             <div data-thumb="{{ $file->iconUrl() }}" data-thumbratio="33/44">
-                <iframe src="{{ $file->viewerUrl() }}"></iframe>
+                <iframe src="{{ $file->viewerUrl($expiration) }}"></iframe>
             </div>
         @endif
     @endforeach

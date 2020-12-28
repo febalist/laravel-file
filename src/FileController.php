@@ -10,7 +10,7 @@ class FileController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(ValidateSignature::class)->only(['proxy', 'download']);
+        $this->middleware(ValidateSignature::class)->only(['view', 'download']);
     }
 
     public function view($disk, $path)
